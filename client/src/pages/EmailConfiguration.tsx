@@ -45,6 +45,28 @@ export default function EmailConfiguration() {
     retry: false,
   });
 
+  // Check for OAuth callback URLs on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('gmail_connected') === 'true') {
+      connectGmailMutation.mutate();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('microsoft_connected') === 'true') {
+      connectMicrosoftMutation.mutate();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('gmail_error') === 'true' || urlParams.get('microsoft_error') === 'true') {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect email account. Please try again.",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const deleteEmailMutation = useMutation({
     mutationFn: (id: string) => apiRequest('DELETE', `/api/email-accounts/${id}`),
     onSuccess: () => {
@@ -73,6 +95,114 @@ export default function EmailConfiguration() {
       });
     },
   });
+
+  const connectGmailMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/email-accounts/gmail/connect'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
+      toast({
+        title: "Success",
+        description: "Gmail account connected successfully",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to connect Gmail account",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const connectMicrosoftMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/email-accounts/outlook/connect'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
+      toast({
+        title: "Success",
+        description: "Microsoft account connected successfully",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to connect Microsoft account",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGmailConnect = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/auth/gmail');
+      const data = await response.json();
+      window.location.href = data.authUrl;
+    } catch (error: any) {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to initiate Gmail connection",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMicrosoftConnect = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/auth/microsoft');
+      const data = await response.json();
+      window.location.href = data.authUrl;
+    } catch (error: any) {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to initiate Microsoft connection",
+        variant: "destructive",
+      });
+    }
+  };
 
   const imapSetupMutation = useMutation({
     mutationFn: (config: typeof imapConfig) => apiRequest('POST', '/api/email-accounts/imap', config),
@@ -111,28 +241,6 @@ export default function EmailConfiguration() {
       });
     },
   });
-
-  const handleGmailConnect = () => {
-    // OAuth flow for Gmail
-    const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = encodeURIComponent(window.location.origin + '/api/email-accounts/gmail/callback');
-    const scope = encodeURIComponent('https://www.googleapis.com/auth/gmail.readonly');
-    
-    const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&access_type=offline&prompt=consent`;
-    
-    window.open(oauthUrl, 'gmail-auth', 'width=500,height=600');
-  };
-
-  const handleOutlookConnect = () => {
-    // OAuth flow for Outlook
-    const clientId = process.env.VITE_MICROSOFT_CLIENT_ID;
-    const redirectUri = encodeURIComponent(window.location.origin + '/api/email-accounts/outlook/callback');
-    const scope = encodeURIComponent('https://graph.microsoft.com/mail.read');
-    
-    const oauthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}&response_mode=query&prompt=consent`;
-    
-    window.open(oauthUrl, 'outlook-auth', 'width=500,height=600');
-  };
 
   const handleImapSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,7 +369,7 @@ export default function EmailConfiguration() {
 
             {/* Outlook OAuth */}
             <button 
-              onClick={handleOutlookConnect}
+              onClick={handleMicrosoftConnect}
               className="email-provider-btn p-6 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
               data-testid="connect-outlook-button"
             >

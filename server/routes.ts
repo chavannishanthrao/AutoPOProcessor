@@ -2,13 +2,21 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./auth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { emailService } from "./services/emailService";
 import { aiService } from "./services/aiService";
 import { erpService } from "./services/erpService";
 import { backgroundJobs } from "./services/backgroundJobs";
 import { insertEmailAccountSchema, insertErpSystemSchema, insertAiConfigurationSchema } from "@shared/schema";
 import { z } from "zod";
+
+// Extend session interface for OAuth tokens
+declare module 'express-session' {
+  interface SessionData {
+    gmailTokens?: any;
+    microsoftTokens?: any;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -121,6 +129,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gmail OAuth endpoints
+  app.get('/api/auth/gmail', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const authUrl = await emailService.getGmailAuthUrl();
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error getting Gmail auth URL:", error);
+      res.status(500).json({ message: "Failed to get Gmail auth URL" });
+    }
+  });
+
+  app.get('/api/auth/gmail/callback', async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code) {
+        return res.status(400).json({ message: "Authorization code required" });
+      }
+
+      const tokens = await emailService.handleGmailCallback(code as string);
+      
+      // Store the connection in session for later association with user
+      req.session.gmailTokens = tokens;
+      
+      res.redirect('/?gmail_connected=true');
+    } catch (error) {
+      console.error("Error in Gmail callback:", error);
+      res.redirect('/?gmail_error=true');
+    }
+  });
+
   app.post('/api/email-accounts/gmail/connect', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -129,12 +173,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const { authorizationCode } = req.body;
-      const emailAccount = await emailService.connectGmail(user.tenantId, authorizationCode);
+      // Get tokens from session (stored during callback)
+      const tokens = req.session.gmailTokens;
+      if (!tokens) {
+        return res.status(400).json({ message: "No Gmail tokens found. Please complete OAuth flow first." });
+      }
+
+      const emailAccount = await emailService.connectGmailWithTokens(user.tenantId, tokens);
+      
+      // Clear tokens from session
+      delete req.session.gmailTokens;
+      
       res.json(emailAccount);
     } catch (error) {
       console.error("Error connecting Gmail:", error);
       res.status(500).json({ message: "Failed to connect Gmail" });
+    }
+  });
+
+  // Microsoft OAuth endpoints
+  app.get('/api/auth/microsoft', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const authUrl = await emailService.getMicrosoftAuthUrl();
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error getting Microsoft auth URL:", error);
+      res.status(500).json({ message: "Failed to get Microsoft auth URL" });
+    }
+  });
+
+  app.get('/api/auth/microsoft/callback', async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code) {
+        return res.status(400).json({ message: "Authorization code required" });
+      }
+
+      const tokens = await emailService.handleMicrosoftCallback(code as string);
+      
+      // Store the connection in session for later association with user
+      req.session.microsoftTokens = tokens;
+      
+      res.redirect('/?microsoft_connected=true');
+    } catch (error) {
+      console.error("Error in Microsoft callback:", error);
+      res.redirect('/?microsoft_error=true');
     }
   });
 
@@ -146,8 +235,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const { authorizationCode } = req.body;
-      const emailAccount = await emailService.connectOutlook(user.tenantId, authorizationCode);
+      // Get tokens from session (stored during callback)
+      const tokens = req.session.microsoftTokens;
+      if (!tokens) {
+        return res.status(400).json({ message: "No Microsoft tokens found. Please complete OAuth flow first." });
+      }
+
+      const emailAccount = await emailService.connectMicrosoftWithTokens(user.tenantId, tokens);
+      
+      // Clear tokens from session
+      delete req.session.microsoftTokens;
+      
       res.json(emailAccount);
     } catch (error) {
       console.error("Error connecting Outlook:", error);

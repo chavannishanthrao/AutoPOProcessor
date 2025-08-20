@@ -4,6 +4,15 @@ import imaps from 'imap-simple';
 import { storage } from '../storage';
 import { EmailAccount } from '@shared/schema';
 
+// OAuth Configuration
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/gmail/callback';
+
+const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
+const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/auth/microsoft/callback';
+
 export class EmailService {
   async checkEmails(tenantId: string): Promise<void> {
     const emailAccounts = await storage.getEmailAccounts(tenantId);
@@ -256,65 +265,147 @@ export class EmailService {
     return attachments;
   }
 
-  async connectGmail(tenantId: string, authorizationCode: string): Promise<EmailAccount> {
+  // Gmail OAuth methods
+  async getGmailAuthUrl(): Promise<string> {
     const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+      GOOGLE_REDIRECT_URI
     );
 
-    const { tokens } = await oauth2Client.getToken(authorizationCode);
-    oauth2Client.setCredentials(tokens);
+    const scopes = [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile'
+    ];
 
-    // Get user email
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    const profile = await gmail.users.getProfile({ userId: 'me' });
-
-    return storage.createEmailAccount({
-      tenantId,
-      email: profile.data.emailAddress!,
-      provider: 'gmail',
-      accessToken: tokens.access_token!,
-      refreshToken: tokens.refresh_token!,
-      isActive: true,
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      prompt: 'consent'
     });
+
+    return authUrl;
   }
 
-  async connectOutlook(tenantId: string, authorizationCode: string): Promise<EmailAccount> {
-    // Microsoft OAuth implementation
-    const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  async handleGmailCallback(code: string): Promise<any> {
+    const oauth2Client = new google.auth.OAuth2(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+      GOOGLE_REDIRECT_URI
+    );
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    // Get user info
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const userInfo = await oauth2.userinfo.get();
+
+    return {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiryDate: tokens.expiry_date,
+      email: userInfo.data.email,
+      name: userInfo.data.name
+    };
+  }
+
+  async connectGmailWithTokens(tenantId: string, tokens: any): Promise<EmailAccount> {
+    const emailAccount = await storage.createEmailAccount({
+      tenantId,
+      provider: 'gmail',
+      email: tokens.email,
+      displayName: tokens.name || tokens.email,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      isActive: true,
+      lastChecked: new Date(),
+    });
+
+    return emailAccount;
+  }
+
+  // Microsoft OAuth methods
+  async getMicrosoftAuthUrl(): Promise<string> {
+    const baseUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+    const params = new URLSearchParams({
+      client_id: MICROSOFT_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: MICROSOFT_REDIRECT_URI,
+      response_mode: 'query',
+      scope: 'offline_access User.Read Mail.Read',
+    });
+
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  async handleMicrosoftCallback(code: string): Promise<any> {
+    const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+    
+    const params = new URLSearchParams({
+      client_id: MICROSOFT_CLIENT_ID,
+      client_secret: MICROSOFT_CLIENT_SECRET,
+      code: code,
+      redirect_uri: MICROSOFT_REDIRECT_URI,
+      grant_type: 'authorization_code'
+    });
+
+    const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        client_id: process.env.MICROSOFT_CLIENT_ID!,
-        client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
-        code: authorizationCode,
-        grant_type: 'authorization_code',
-        redirect_uri: process.env.MICROSOFT_REDIRECT_URI!,
-      }),
+      body: params
     });
 
-    const tokens = await tokenResponse.json();
+    const tokens = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(`Microsoft OAuth error: ${tokens.error_description}`);
+    }
 
-    // Get user email
-    const graphClient = Client.init({
-      authProvider: {
-        getAccessToken: async () => tokens.access_token,
+    // Get user info
+    const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        'Authorization': `Bearer ${tokens.access_token}`
       }
     });
 
-    const user = await graphClient.api('/me').get();
+    const userInfo = await userResponse.json();
 
-    return storage.createEmailAccount({
-      tenantId,
-      email: user.mail || user.userPrincipalName,
-      provider: 'outlook',
+    return {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
+      expiryDate: Date.now() + (tokens.expires_in * 1000),
+      email: userInfo.mail || userInfo.userPrincipalName,
+      name: userInfo.displayName
+    };
+  }
+
+  async connectMicrosoftWithTokens(tenantId: string, tokens: any): Promise<EmailAccount> {
+    const emailAccount = await storage.createEmailAccount({
+      tenantId,
+      provider: 'outlook',
+      email: tokens.email,
+      displayName: tokens.name || tokens.email,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       isActive: true,
+      lastChecked: new Date(),
     });
+
+    return emailAccount;
+  }
+
+  async connectGmail(tenantId: string, authorizationCode: string): Promise<EmailAccount> {
+    // Legacy method - redirect to new OAuth flow
+    throw new Error("Please use the new OAuth flow via /api/auth/gmail");
+  }
+
+  async connectOutlook(tenantId: string, authorizationCode: string): Promise<EmailAccount> {
+    // Legacy method - redirect to new OAuth flow
+    throw new Error("Please use the new OAuth flow via /api/auth/microsoft");
   }
 
   async setupImap(tenantId: string, config: {
