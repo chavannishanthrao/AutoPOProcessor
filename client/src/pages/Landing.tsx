@@ -1,8 +1,113 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bot, CheckCircle, Clock, DollarSign, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Bot, CheckCircle, Clock, DollarSign, FileText, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginUserSchema, type LoginUser } from "@shared/schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 export default function Landing() {
+  const [showLogin, setShowLogin] = useState(false);
+  const { loginMutation } = useAuth();
+
+  const form = useForm<LoginUser>({
+    resolver: zodResolver(loginUserSchema),
+    defaultValues: {
+      email: "chavanv@dotsolved.com",
+      password: "testi@123",
+    },
+  });
+
+  const onSubmit = (data: LoginUser) => {
+    loginMutation.mutate(data);
+  };
+
+  if (showLogin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
+                  <Bot className="text-white text-2xl" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl">Welcome Back</CardTitle>
+              <CardDescription>
+                Sign in to your Sales Order AI account
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="email" 
+                            placeholder="Enter your email" 
+                            data-testid="input-email"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password" 
+                            placeholder="Enter your password"
+                            data-testid="input-password"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loginMutation.isPending}
+                    data-testid="button-login"
+                  >
+                    {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign In
+                  </Button>
+                </form>
+              </Form>
+              <div className="mt-6 text-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowLogin(false)}
+                  data-testid="button-back"
+                >
+                  ← Back to Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       <div className="container mx-auto px-4 py-16">
@@ -26,7 +131,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             className="px-8 py-3 text-lg"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => setShowLogin(true)}
             data-testid="login-button"
           >
             Get Started

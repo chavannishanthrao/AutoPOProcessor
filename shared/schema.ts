@@ -25,15 +25,16 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - mandatory for Replit Auth
+// User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(),
+  password: varchar("password").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   tenantId: varchar("tenant_id").notNull(),
-  role: varchar("role").notNull().default("user"),
+  role: varchar("role").notNull().default("admin"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -154,6 +155,15 @@ export const notifications = pgTable("notifications", {
 });
 
 // Insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const loginUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
 export const upsertUserSchema = createInsertSchema(users);
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -195,6 +205,8 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 });
 
 // Types
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Tenant = typeof tenants.$inferSelect;
