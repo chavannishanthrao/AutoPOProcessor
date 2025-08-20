@@ -1,0 +1,188 @@
+Sales Order AI Automation (Multi-Tenant) Product with Tech Stack
+
+You are an expert SaaS product designer, AI architect, and full-stack engineer.
+Your task is to design a complete multi-tenant AI-powered SaaS application called Sales Order AI Automation, which automates the purchase order (PO) lifecycle from email intake to ERP integration, with real-time process monitoring, dashboards, and multi-ERP compatibility.
+The system will be multi-tenant with strict data isolation.
+
+Core Functionality Flow
+
+Email Agent (LangGraph + Python)
+
+Monitors configured email inbox(es) for new messages.
+
+Identifies emails related to purchase orders using NLP.
+
+Extracts metadata (sender, subject, body text) & attachments.
+
+PO Document Detection & OCR (LangGraph + OpenAI Vision/OCR API)
+
+Detects if the attachment is a valid PO.
+
+Uses OCR to extract structured PO data (PO number, vendor, items, quantities, prices, etc.).
+
+Validation Agent (LangGraph)
+
+Validates vendor & address against master data stored in PostgreSQL.
+
+Flags mismatches for review.
+
+Formatting Agent (LangGraph)
+
+Formats validated PO data per target ERP schema (Oracle Fusion, NetSuite, Salesforce, SAP, Microsoft Dynamics).
+
+ERP Integration Service (Python)
+
+Pushes PO data to ERP using respective APIs.
+
+Handles retries and error logging.
+
+Multi-Tenant Management
+
+Each tenant has isolated configurations, data, and ERP integrations.
+
+Role-based access control (RBAC) for tenant admins & users.
+
+Product Name
+
+Sales Order AI Automation — AI-driven, multi-tenant PO processing SaaS.
+
+Navigation Elements
+
+Authentication (Sign In, Sign Up, Forgot Password, Tenant Switch)
+
+Dashboard
+
+Total POs processed / failed / in-progress
+
+Average Processing Time
+
+Time Saved vs Manual Entry
+
+Error Trends & Mismatch Reports
+
+ERP Success/Failure stats
+
+Date & ERP filters for reports
+
+Administration
+
+Email Configuration (IMAP, Office365, Gmail API)
+
+ERP Integration Setup
+
+Master Data Upload (Vendor Lists, Contracts)
+
+AI Model Settings (OCR accuracy thresholds, matching rules)
+
+User & Role Management
+
+Real-Time Process Monitor
+
+Heartbeat View showing live progress from email → OCR → validation → ERP push
+
+Color-coded stage indicators (green, amber, red)
+
+Clickable logs for each stage
+
+Reports (CSV/PDF export)
+
+SLA performance
+
+Vendor mismatch history
+
+Audit trail per PO
+
+Support
+
+API documentation
+
+Help center
+
+Contact support
+
+Visual Style
+
+Theme: Light
+
+Primary Color: Royal Blue #014db2
+
+Accent Color: Silver #c0c0c0
+
+Spacing: 20px padding
+
+Borders: 1px solid light gray
+
+Typography: Sans-serif, 16px body, 22px headers
+
+Icons: Minimal, flat-style
+
+Process Visualization: Animated flowchart view of PO lifecycle
+
+Tech Stack
+Frontend
+
+ReactJS (Next.js optional for SSR)
+
+TailwindCSS for styling
+
+WebSockets for real-time process updates
+
+Backend
+
+Python (FastAPI) for REST APIs
+
+LangGraph for multi-agent workflow orchestration
+
+OpenAI API for NLP & OCR (document parsing, email classification)
+
+Playwright (optional) for ERP web automation if API unavailable
+
+Database
+
+PostgreSQL (Row-Level Security for multi-tenant isolation)
+
+SQLAlchemy / Prisma for ORM
+
+Message Queue / Events
+
+RabbitMQ or Kafka for async processing
+
+Authentication
+
+JWT + OAuth2 (Support for SSO via Okta, Azure AD)
+
+Deployment
+
+Dockerized services
+
+Kubernetes (multi-tenant namespace isolation)
+
+CI/CD with GitHub Actions
+
+Additional Enhancements
+
+AI Exception Handling Agent — suggests fixes for failed validations.
+
+Bulk PO Upload API for non-email processing.
+
+Custom ERP Field Mapping Tool — no-code UI for mapping extracted fields.
+
+Multi-language OCR & UI.
+
+Usage tracking & tenant billing module.
+
+End-to-end encryption for PO data.
+
+Your output should:
+
+Provide full SaaS product design including user flows, feature lists, and architecture.
+
+Suggest a scalable architecture diagram with frontend, backend, agents, database, and integrations.
+
+Include LangGraph multi-agent workflow definitions for Email Agent, OCR Agent, Validation Agent, and ERP Agent.
+
+Recommend PostgreSQL schema design for tenants, users, master data, PO records, and logs.
+
+Suggest API endpoints for all features.
+
+Propose UI wireframes for dashboard & real-time process monitor.
