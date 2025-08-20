@@ -30,7 +30,7 @@ export default function Landing() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <Card>
+          <Card className="shadow-lg border border-gray-200 bg-white">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
                 <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
@@ -140,7 +140,7 @@ export default function Landing() {
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <Card data-testid="feature-ai-processing">
+          <Card data-testid="feature-ai-processing" className="shadow-md border border-gray-200 bg-white">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <FileText className="text-blue-600 text-xl" />
@@ -152,7 +152,7 @@ export default function Landing() {
             </CardContent>
           </Card>
 
-          <Card data-testid="feature-real-time">
+          <Card data-testid="feature-real-time" className="shadow-md border border-gray-200 bg-white">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Clock className="text-green-600 text-xl" />
@@ -164,7 +164,7 @@ export default function Landing() {
             </CardContent>
           </Card>
 
-          <Card data-testid="feature-erp-integration">
+          <Card data-testid="feature-erp-integration" className="shadow-md border border-gray-200 bg-white">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="text-purple-600 text-xl" />
@@ -176,7 +176,7 @@ export default function Landing() {
             </CardContent>
           </Card>
 
-          <Card data-testid="feature-cost-savings">
+          <Card data-testid="feature-cost-savings" className="shadow-md border border-gray-200 bg-white">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <DollarSign className="text-yellow-600 text-xl" />
