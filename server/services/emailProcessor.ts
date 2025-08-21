@@ -275,36 +275,51 @@ class EmailProcessor {
 
   // Check if email is Purchase Order related using LLM
   private async checkIfPurchaseOrderEmail(email: EmailData, emailAccount: EmailAccount): Promise<boolean> {
+    // First, do simple keyword-based detection for obvious PO emails
+    const subject = email.subject.toLowerCase();
+    const keywordIndicators = [
+      'po ', 'po#', 'po-', 'po_', 
+      'purchase order', 'purchase ord', 'p.o.',
+      'order confirmation', 'order #',
+      'procurement', 'invoice', 'quote'
+    ];
+
+    const hasKeywords = keywordIndicators.some(keyword => 
+      subject.includes(keyword.toLowerCase())
+    );
+
+    // If it has obvious keywords or attachments, it's likely a PO email
+    if (hasKeywords || email.attachments.length > 0) {
+      console.log(`PO detected by keywords or attachments: ${email.subject}`);
+      return true;
+    }
+
+    // For ambiguous cases, use AI detection as fallback
     try {
-      // Get active AI configuration for the tenant
       const aiConfig = await storage.getActiveAiConfiguration(emailAccount.tenantId);
       if (!aiConfig) {
-        console.log('No active AI configuration found for tenant:', emailAccount.tenantId);
-        return false; // No AI config available, skip processing
+        console.log('No AI config, using keyword detection only');
+        return hasKeywords;
       }
 
-      const prompt = `
-Analyze this email to determine if it contains a Purchase Order or is related to purchase order processing.
+      const prompt = `Email subject: "${email.subject}"
+From: "${email.from}"
+Attachments: ${email.attachments.length} files
 
-Email Subject: "${email.subject}"
-Email From: "${email.from}"
-Attachment Count: ${email.attachments.length}
-Attachment Names: ${email.attachments.map(a => a.filename).join(', ')}
-
-Return only "true" if this email likely contains a purchase order or is related to purchase order processing, otherwise return "false".
-
-Consider these indicators:
-- Subject contains words like: PO, Purchase Order, Order, Invoice, Quote, Procurement
-- Sender is likely a vendor, supplier, or procurement department
-- Attachments are PDFs, images, or documents that might contain purchase orders
-
-Response (true/false only):`;
+Is this a purchase order email? Reply only "true" or "false".`;
 
       const response = await aiService.processWithOpenAI(prompt, aiConfig, 'gpt-3.5-turbo');
-      return response.toLowerCase().trim() === 'true';
+      const isPoRelated = response.toLowerCase().trim() === 'true';
+      
+      if (isPoRelated) {
+        console.log(`PO detected by AI: ${email.subject}`);
+      }
+      
+      return isPoRelated;
     } catch (error) {
-      console.error('Error checking if email is PO-related:', error);
-      return false; // Conservative approach - skip if we can't determine
+      console.error('Error in AI PO detection:', error);
+      // Fallback to keyword detection if AI fails
+      return hasKeywords;
     }
   }
 

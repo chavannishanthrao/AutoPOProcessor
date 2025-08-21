@@ -59,39 +59,37 @@ export default function RealTimeMonitor() {
     }
   }, [lastMessage]);
 
-  // Mock active processes for demo
+  // Load real processing logs and convert to active processes
   useEffect(() => {
-    setActiveProcesses([
-      {
-        id: '1',
-        poNumber: 'PO-2024-005',
-        vendorName: 'Tech Supplies Inc',
-        startTime: '2 minutes ago',
-        currentStage: 'data_validation',
-        stages: [
+    if (processingLogs?.length > 0) {
+      // Convert recent processing logs to active processes
+      const recentLogs = processingLogs.slice(0, 5); // Show last 5 processes
+      
+      const processes = recentLogs.map((log: any, index: number) => {
+        const stages = [
           { name: 'Email Detection', status: 'completed', duration: '2.1s', icon: Mail },
-          { name: 'OCR Processing', status: 'completed', duration: '1.8s', icon: Eye },
-          { name: 'Data Validation', status: 'processing', icon: CheckCircle },
-          { name: 'ERP Formatting', status: 'pending', icon: RefreshCw },
-          { name: 'ERP Integration', status: 'pending', icon: Database },
-        ]
-      },
-      {
-        id: '2',
-        poNumber: 'PO-2024-006',
-        vendorName: 'Office World Ltd',
-        startTime: '5 minutes ago',
-        currentStage: 'completed',
-        stages: [
-          { name: 'Email Detection', status: 'completed', duration: '1.9s', icon: Mail },
-          { name: 'OCR Processing', status: 'completed', duration: '2.4s', icon: Eye },
-          { name: 'Data Validation', status: 'completed', duration: '0.8s', icon: CheckCircle },
-          { name: 'ERP Formatting', status: 'completed', duration: '0.3s', icon: RefreshCw },
-          { name: 'ERP Integration', status: 'completed', duration: 'Reprocessed', icon: Database },
-        ]
-      }
-    ]);
-  }, []);
+          { name: 'OCR Processing', status: log.stage === 'ocr_processing' && log.status === 'failed' ? 'failed' : 'completed', duration: '1.8s', icon: Eye },
+          { name: 'Data Validation', status: log.stage === 'data_validation' ? log.status : (log.stage === 'ocr_processing' ? 'pending' : 'completed'), icon: CheckCircle },
+          { name: 'ERP Formatting', status: log.stage === 'erp_formatting' ? log.status : 'pending', icon: RefreshCw },
+          { name: 'ERP Integration', status: log.stage === 'erp_integration' ? log.status : 'pending', icon: Database },
+        ];
+
+        return {
+          id: log.id || `process-${index}`,
+          poNumber: log.details?.poNumber || `PO-${Date.now()}-${index}`,
+          vendorName: log.details?.vendor || 'Processing...',
+          startTime: log.createdAt ? new Date(log.createdAt).toLocaleString() : 'Just now',
+          currentStage: log.stage || 'email_detection',
+          stages: stages as ProcessingStage[],
+        };
+      });
+      
+      setActiveProcesses(processes);
+    } else {
+      // Show empty state when no real logs
+      setActiveProcesses([]);
+    }
+  }, [processingLogs]);
 
   const getStageStatusColor = (status: string) => {
     switch (status) {
