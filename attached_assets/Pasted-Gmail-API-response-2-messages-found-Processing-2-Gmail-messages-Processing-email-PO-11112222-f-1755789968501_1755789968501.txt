@@ -1,0 +1,100 @@
+Gmail API response: 2 messages found
+Processing 2 Gmail messages...
+Processing email: PO #11112222 from Nishanth Rao <nirannishanth96@gmail.com>
+Error processing with OpenAI: AuthenticationError: 401 Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.
+    at Function.generate (/home/runner/workspace/node_modules/openai/src/core/error.ts:76:14)
+    at OpenAI.makeStatusError (/home/runner/workspace/node_modules/openai/src/client.ts:445:28)
+    at OpenAI.makeRequest (/home/runner/workspace/node_modules/openai/src/client.ts:668:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:133:24)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11) {
+  status: 401,
+  headers: Headers {
+    date: 'Thu, 21 Aug 2025 15:25:45 GMT',
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': '256',
+    connection: 'keep-alive',
+    vary: 'Origin',
+    'x-request-id': 'req_0eafa80ebcdf4054a48ecab3bd6e5e36',
+    'x-envoy-upstream-service-time': '21',
+    'cf-cache-status': 'DYNAMIC',
+    'set-cookie': '__cf_bm=12SYwsfKXR1m0nl8UTEVsLvdQ3pNVCEfjBEHDI_YxvE-1755789945-1.0.1.1-vM8joxigXWmcloqRZsdAYyRCG0jqzr21mJoI3dmYBzKexARdOq_p6LFlhbpipx9dgeedIr6Yo2m_jXO5iTGglCnGUSaRB9GW5kXNtWsbzZ8; path=/; expires=Thu, 21-Aug-25 15:55:45 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None, _cfuvid=uUjxK7LAknTY.KSfko79rGlCZw4o_r9_gTY9hgBpqYc-1755789945122-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    server: 'cloudflare',
+    'cf-ray': '972b25143800be76-CMH',
+    'alt-svc': 'h3=":443"; ma=86400'
+  },
+  requestID: 'req_0eafa80ebcdf4054a48ecab3bd6e5e36',
+  error: {
+    message: 'Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_api_key'
+  },
+  code: 'invalid_api_key',
+  param: null,
+  type: 'invalid_request_error'
+}
+Error checking if email is PO-related: Error: AI processing failed: 401 Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.
+    at AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:147:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+Email not PO-related, skipping: PO #11112222
+Processing email: PO #2342 from Nishanth Rao <nirannishanth96@gmail.com>
+Error processing with OpenAI: AuthenticationError: 401 Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.
+    at Function.generate (/home/runner/workspace/node_modules/openai/src/core/error.ts:76:14)
+    at OpenAI.makeStatusError (/home/runner/workspace/node_modules/openai/src/client.ts:445:28)
+    at OpenAI.makeRequest (/home/runner/workspace/node_modules/openai/src/client.ts:668:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:133:24)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11) {
+  status: 401,
+  headers: Headers {
+    date: 'Thu, 21 Aug 2025 15:25:45 GMT',
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': '256',
+    connection: 'keep-alive',
+    vary: 'Origin',
+    'x-request-id': 'req_c9c47fe6d5d54c98a4e13775238da2a7',
+    'x-envoy-upstream-service-time': '2',
+    'cf-cache-status': 'DYNAMIC',
+    'set-cookie': '__cf_bm=HMwTfdcf_z4wkwMkt6P50TnqG3mC4rpZnDKir0NSqb4-1755789945-1.0.1.1-4TPp5uyciWLC.FXLUyUmKKUoRsCyB_tdlvynWuxiHUDdn31o1dRFPVFJPu5Df5jtZ03WSunI4wb2wiO_kF_jiZtObVNoziqsw_NhIsKvb1A; path=/; expires=Thu, 21-Aug-25 15:55:45 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None, _cfuvid=PC3IVlO7r4L9WztToXu3HrTf7x54dkV7iOntZz7ClXA-1755789945295-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    server: 'cloudflare',
+    'cf-ray': '972b25158b49be76-CMH',
+    'alt-svc': 'h3=":443"; ma=86400'
+  },
+  requestID: 'req_c9c47fe6d5d54c98a4e13775238da2a7',
+  error: {
+    message: 'Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_api_key'
+  },
+  code: 'invalid_api_key',
+  param: null,
+  type: 'invalid_request_error'
+}
+Error checking if email is PO-related: Error: AI processing failed: 401 Incorrect API key provided: asdasd. You can find your API key at https://platform.openai.com/account/api-keys.
+    at AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:147:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+Email not PO-related, skipping: PO #2342
+3:25:50 PM [express] GET /api/user 304 in 132ms :: {"id":"6a6f52a4-7b44-420f-b846-a82a6335eaee","ema…
+3:25:51 PM [express] GET /api/dashboard/metrics 304 in 188ms :: {"totalPOs":0,"successRate":0,"avgPr…
+3:25:51 PM [express] GET /api/purchase-orders 304 in 175ms :: []
+WebSocket client connected
