@@ -168,7 +168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      const tokens = await emailService.handleGmailCallback(code as string);
+      // Get tenant ID from session or use default - in production this should be properly handled
+      const tenantId = 'default-tenant-1'; // TODO: Get from authenticated user session
+      const tokens = await oauthService.handleGmailCallback(code as string, tenantId);
       
       // Store the connection in session for later association with user
       req.session.gmailTokens = tokens;
@@ -281,7 +283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      const tokens = await emailService.handleMicrosoftCallback(code as string);
+      // Get tenant ID from session or use default - in production this should be properly handled
+      const tenantId = 'default-tenant-1'; // TODO: Get from authenticated user session
+      const tokens = await oauthService.handleMicrosoftCallback(code as string, tenantId);
       
       // Store the connection in session for later association with user
       req.session.microsoftTokens = tokens;

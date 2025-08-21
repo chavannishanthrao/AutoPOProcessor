@@ -127,6 +127,78 @@ class OAuthService {
     }
   }
 
+  // Handle Gmail OAuth callback - simplified version for session storage
+  async handleGmailCallback(code: string, tenantId: string): Promise<any> {
+    try {
+      const googleOAuth2Client = await this.createGoogleOAuth2Client(tenantId);
+      const { tokens } = await googleOAuth2Client.getToken(code);
+      
+      // Get user info
+      googleOAuth2Client.setCredentials(tokens);
+      const oauth2 = google.oauth2({ version: 'v2', auth: googleOAuth2Client });
+      const userInfo = await oauth2.userinfo.get();
+
+      return {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiryDate: tokens.expiry_date,
+        email: userInfo.data.email,
+        name: userInfo.data.name
+      };
+    } catch (error) {
+      console.error('Error in Gmail callback:', error);
+      throw new Error('Failed to exchange Gmail authorization code');
+    }
+  }
+
+  // Handle Microsoft OAuth callback - simplified version for session storage
+  async handleMicrosoftCallback(code: string, tenantId: string): Promise<any> {
+    try {
+      const config = await this.getOAuthConfig(tenantId, 'microsoft');
+      if (!config) {
+        throw new Error('Microsoft OAuth configuration not found for this tenant.');
+      }
+      
+      const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          code,
+          redirect_uri: config.redirectUri,
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      if (!tokenResponse.ok) {
+        throw new Error(tokens.error_description || 'Token exchange failed');
+      }
+
+      // Get user info using the access token
+      const userResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${tokens.access_token}`,
+        },
+      });
+      const userInfo = await userResponse.json();
+
+      return {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiryDate: Date.now() + (tokens.expires_in * 1000),
+        email: userInfo.mail || userInfo.userPrincipalName,
+        name: userInfo.displayName || userInfo.mail
+      };
+    } catch (error) {
+      console.error('Error in Microsoft callback:', error);
+      throw new Error('Failed to exchange Microsoft authorization code');
+    }
+  }
+
   // Exchange Microsoft authorization code for tokens
   async exchangeMicrosoftCode(code: string, userId: string, tenantId: string): Promise<void> {
     try {
