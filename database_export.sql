@@ -302,7 +302,7 @@ ALTER TABLE public.vendors OWNER TO neondb_owner;
 --
 
 COPY public.ai_configurations (id, tenant_id, provider, model_name, api_key, endpoint, configuration, is_active, created_at, updated_at) FROM stdin;
-850dd09f-9f25-4340-bede-b9b7ceeb47f9	default-tenant-1	openai	gpt-4o	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	\N	\N	t	2025-08-21 11:32:00.261207	2025-08-21 11:32:17.160693
+850dd09f-9f25-4340-bede-b9b7ceeb47f9	default-tenant-1	openai	gpt-4o	asdasd	\N	\N	t	2025-08-21 11:32:00.261207	2025-08-21 11:32:17.160693
 \.
 
 
