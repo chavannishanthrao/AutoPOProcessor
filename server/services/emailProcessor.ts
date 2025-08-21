@@ -130,7 +130,7 @@ class EmailProcessor {
     }
 
     return emails;
-    } catch (error) {
+      } catch (error) {
       console.error(`Error in fetchGmailEmails for ${emailAccount.email}:`, error);
       throw error;
     }
