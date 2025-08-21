@@ -36,31 +36,38 @@ interface TokenData {
 }
 
 class OAuthService {
-  private googleOAuth2Client: any;
-  private microsoftClientId: string;
-  private microsoftClientSecret: string;
+  
+  // Get OAuth configuration from database
+  private async getOAuthConfig(tenantId: string, provider: 'gmail' | 'microsoft') {
+    return await storage.getOauthConfiguration(tenantId, provider);
+  }
 
-  constructor() {
-    // Initialize Google OAuth2 client
-    this.googleOAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/google/callback`
+  // Create Google OAuth2 client with tenant-specific config
+  private async createGoogleOAuth2Client(tenantId: string) {
+    const config = await this.getOAuthConfig(tenantId, 'gmail');
+    if (!config) {
+      throw new Error('Gmail OAuth configuration not found for this tenant. Please configure OAuth credentials in admin settings.');
+    }
+
+    return new google.auth.OAuth2(
+      config.clientId,
+      config.clientSecret,
+      config.redirectUri
     );
-
-    this.microsoftClientId = process.env.MS_CLIENT_ID || '';
-    this.microsoftClientSecret = process.env.MS_CLIENT_SECRET || '';
   }
 
   // Gmail OAuth URLs
-  getGmailAuthUrl(): string {
-    const scopes = [
+  async getGmailAuthUrl(tenantId: string): Promise<string> {
+    const googleOAuth2Client = await this.createGoogleOAuth2Client(tenantId);
+    const config = await this.getOAuthConfig(tenantId, 'gmail');
+    
+    const scopes = config?.scopes && config.scopes.length > 0 ? config.scopes : [
       'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.modify', // for marking as read
+      'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/userinfo.email',
     ];
 
-    return this.googleOAuth2Client.generateAuthUrl({
+    return googleOAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent',
@@ -68,27 +75,34 @@ class OAuthService {
   }
 
   // Microsoft OAuth URLs
-  getMicrosoftAuthUrl(): string {
-    const scopes = 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read';
-    const redirectUri = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/microsoft/callback`;
+  async getMicrosoftAuthUrl(tenantId: string): Promise<string> {
+    const config = await this.getOAuthConfig(tenantId, 'microsoft');
+    if (!config) {
+      throw new Error('Microsoft OAuth configuration not found for this tenant. Please configure OAuth credentials in admin settings.');
+    }
+
+    const scopes = config?.scopes && config.scopes.length > 0 
+      ? config.scopes.join(' ')
+      : 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read';
     
     return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
-      `client_id=${this.microsoftClientId}&` +
+      `client_id=${config.clientId}&` +
       `response_type=code&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
       `response_mode=query&` +
       `scope=${encodeURIComponent(scopes)}&` +
-      `state=12345`;
+      `state=microsoft`;
   }
 
   // Exchange Google authorization code for tokens
   async exchangeGoogleCode(code: string, userId: string, tenantId: string): Promise<void> {
     try {
-      const { tokens } = await this.googleOAuth2Client.getToken(code);
+      const googleOAuth2Client = await this.createGoogleOAuth2Client(tenantId);
+      const { tokens } = await googleOAuth2Client.getToken(code);
       
       // Get user info
-      this.googleOAuth2Client.setCredentials(tokens);
-      const gmail = google.gmail({ version: 'v1', auth: this.googleOAuth2Client });
+      googleOAuth2Client.setCredentials(tokens);
+      const gmail = google.gmail({ version: 'v1', auth: googleOAuth2Client });
       const profile = await gmail.users.getProfile({ userId: 'me' });
       
       // Store encrypted tokens
@@ -116,7 +130,10 @@ class OAuthService {
   // Exchange Microsoft authorization code for tokens
   async exchangeMicrosoftCode(code: string, userId: string, tenantId: string): Promise<void> {
     try {
-      const redirectUri = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/auth/microsoft/callback`;
+      const config = await this.getOAuthConfig(tenantId, 'microsoft');
+      if (!config) {
+        throw new Error('Microsoft OAuth configuration not found for this tenant.');
+      }
       
       const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
@@ -124,10 +141,10 @@ class OAuthService {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          client_id: this.microsoftClientId,
-          client_secret: this.microsoftClientSecret,
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
           code,
-          redirect_uri: redirectUri,
+          redirect_uri: config.redirectUri,
           grant_type: 'authorization_code',
         }),
       });

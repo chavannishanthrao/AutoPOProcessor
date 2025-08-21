@@ -9,7 +9,7 @@ import { erpService } from "./services/erpService";
 import { backgroundJobs } from "./services/backgroundJobs";
 import { oauthService } from "./services/oauthService";
 import { emailProcessor } from "./services/emailProcessor";
-import { insertEmailAccountSchema, insertErpSystemSchema, insertAiConfigurationSchema } from "@shared/schema";
+import { insertEmailAccountSchema, insertErpSystemSchema, insertAiConfigurationSchema, insertOauthConfigurationSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Extend session interface for OAuth tokens
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const authUrl = await emailService.getGmailAuthUrl();
+      const authUrl = await oauthService.getGmailAuthUrl(user.tenantId);
       res.json({ authUrl });
     } catch (error) {
       console.error("Error getting Gmail auth URL:", error);
@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const authUrl = await emailService.getMicrosoftAuthUrl();
+      const authUrl = await oauthService.getMicrosoftAuthUrl(user.tenantId);
       res.json({ authUrl });
     } catch (error) {
       console.error("Error getting Microsoft auth URL:", error);
@@ -279,6 +279,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting email account:", error);
       res.status(500).json({ message: "Failed to delete email account" });
+    }
+  });
+
+  // OAuth configurations
+  app.get('/api/oauth-configurations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const oauthConfigs = await storage.getOauthConfigurations(user.tenantId);
+      // Remove sensitive client secrets
+      const sanitized = oauthConfigs.map(config => ({
+        ...config,
+        clientSecret: config.clientSecret ? '****' : undefined,
+      }));
+      res.json(sanitized);
+    } catch (error) {
+      console.error("Error fetching OAuth configurations:", error);
+      res.status(500).json({ message: "Failed to fetch OAuth configurations" });
+    }
+  });
+
+  app.post('/api/oauth-configurations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const configData = insertOauthConfigurationSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const oauthConfig = await storage.createOauthConfiguration(configData);
+      res.json({
+        ...oauthConfig,
+        clientSecret: '****', // Don't send back the secret
+      });
+    } catch (error) {
+      console.error("Error creating OAuth configuration:", error);
+      res.status(500).json({ message: "Failed to create OAuth configuration" });
+    }
+  });
+
+  app.put('/api/oauth-configurations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const updateData = req.body;
+      delete updateData.id;
+      delete updateData.tenantId;
+      delete updateData.createdAt;
+      delete updateData.updatedAt;
+
+      const oauthConfig = await storage.updateOauthConfiguration(req.params.id, updateData);
+      res.json({
+        ...oauthConfig,
+        clientSecret: '****', // Don't send back the secret
+      });
+    } catch (error) {
+      console.error("Error updating OAuth configuration:", error);
+      res.status(500).json({ message: "Failed to update OAuth configuration" });
+    }
+  });
+
+  app.delete('/api/oauth-configurations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteOauthConfiguration(req.params.id);
+      res.json({ message: 'OAuth configuration deleted' });
+    } catch (error) {
+      console.error("Error deleting OAuth configuration:", error);
+      res.status(500).json({ message: "Failed to delete OAuth configuration" });
     }
   });
 

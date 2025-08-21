@@ -77,6 +77,20 @@ export const erpSystems = pgTable("erp_systems", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// OAuth Configuration for Email Providers
+export const oauthConfigurations = pgTable("oauth_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  provider: varchar("provider").notNull(), // 'gmail', 'microsoft'
+  clientId: varchar("client_id").notNull(),
+  clientSecret: varchar("client_secret").notNull(), // Encrypted
+  redirectUri: varchar("redirect_uri").notNull(),
+  scopes: text("scopes").array().notNull().default(sql`'{}'`),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // AI model configurations
 export const aiConfigurations = pgTable("ai_configurations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -233,6 +247,11 @@ export const insertExtractedPODataSchema = createInsertSchema(extractedPOData).o
   createdAt: true,
   updatedAt: true,
 });
+export const insertOauthConfigurationSchema = createInsertSchema(oauthConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -257,3 +276,5 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type ExtractedPOData = typeof extractedPOData.$inferSelect;
 export type InsertExtractedPOData = z.infer<typeof insertExtractedPODataSchema>;
+export type OauthConfiguration = typeof oauthConfigurations.$inferSelect;
+export type InsertOauthConfiguration = z.infer<typeof insertOauthConfigurationSchema>;

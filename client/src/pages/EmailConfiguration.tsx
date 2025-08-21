@@ -1,516 +1,471 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { apiRequest } from "@/lib/queryClient";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus, Settings, Globe, Mail, AlertCircle, Check, X, Edit3, Trash2, Save, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+// OAuth Configuration Schema
+const oauthConfigSchema = z.object({
+  provider: z.enum(['gmail', 'microsoft']),
+  clientId: z.string().min(1, 'Client ID is required'),
+  clientSecret: z.string().min(1, 'Client Secret is required'),
+  redirectUri: z.string().url('Must be a valid URL'),
+  scopes: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
 
-import {
-  Mail,
-  Plus,
-  Trash2,
-  Settings,
-  TestTube,
-  CheckCircle,
-  XCircle,
-  Server,
-} from "lucide-react";
-import { FaGoogle, FaMicrosoft } from "react-icons/fa";
+type OAuthConfigFormData = z.infer<typeof oauthConfigSchema>;
 
-export default function EmailConfiguration() {
-  const { user } = useAuth();
+export default function EmailConfigurationNew() {
+  const [activeTab, setActiveTab] = useState('accounts');
+  const [editingConfig, setEditingConfig] = useState<string | null>(null);
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showImapDialog, setShowImapDialog] = useState(false);
-  const [imapConfig, setImapConfig] = useState({
-    email: '',
-    host: '',
-    port: 993,
-    user: '',
-    password: '',
-    tls: true,
-  });
 
-  const { data: emailAccounts, isLoading } = useQuery({
+  // Fetch email accounts
+  const { data: emailAccounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ['/api/email-accounts'],
-    retry: false,
   });
 
-  const deleteEmailMutation = useMutation({
-    mutationFn: (id: string) => apiRequest('DELETE', `/api/email-accounts/${id}`),
+  // Fetch OAuth configurations
+  const { data: oauthConfigs = [], isLoading: oauthLoading } = useQuery({
+    queryKey: ['/api/oauth-configurations'],
+  });
+
+  // OAuth configuration form
+  const form = useForm<OAuthConfigFormData>({
+    resolver: zodResolver(oauthConfigSchema),
+    defaultValues: {
+      provider: 'gmail',
+      clientId: '',
+      clientSecret: '',
+      redirectUri: '',
+      scopes: '',
+      isActive: true,
+    },
+  });
+
+  // Create OAuth configuration mutation
+  const createOAuthConfig = useMutation({
+    mutationFn: async (data: OAuthConfigFormData) => {
+      const response = await fetch('/api/oauth-configurations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          scopes: data.scopes ? data.scopes.split(',').map(s => s.trim()).filter(Boolean) : [],
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create OAuth configuration');
+      }
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/oauth-configurations'] });
+      form.reset();
       toast({
-        title: "Success",
-        description: "Email account deleted successfully",
+        title: "OAuth Configuration Created",
+        description: "The OAuth configuration has been successfully created.",
       });
     },
     onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to delete email account",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const connectGmailMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/email-accounts/gmail/connect'),
+  // Delete OAuth configuration mutation
+  const deleteOAuthConfig = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/oauth-configurations/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete OAuth configuration');
+      }
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/oauth-configurations'] });
       toast({
-        title: "Success",
-        description: "Gmail account connected successfully",
+        title: "OAuth Configuration Deleted",
+        description: "The OAuth configuration has been successfully deleted.",
       });
     },
     onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to connect Gmail account",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const connectMicrosoftMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/email-accounts/outlook/connect'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
-      toast({
-        title: "Success",
-        description: "Microsoft account connected successfully",
-      });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to connect Microsoft account",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleGmailConnect = async () => {
-    try {
-      const response = await apiRequest('GET', '/api/auth/gmail');
-      const data = await response.json();
-      window.location.href = data.authUrl;
-    } catch (error: any) {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to initiate Gmail connection",
-        variant: "destructive",
-      });
-    }
+  const onSubmit = (data: OAuthConfigFormData) => {
+    createOAuthConfig.mutate(data);
   };
 
-  const handleMicrosoftConnect = async () => {
-    try {
-      const response = await apiRequest('GET', '/api/auth/microsoft');
-      const data = await response.json();
-      window.location.href = data.authUrl;
-    } catch (error: any) {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to initiate Microsoft connection",
-        variant: "destructive",
-      });
-    }
+  const toggleShowSecret = (configId: string) => {
+    setShowSecrets(prev => ({
+      ...prev,
+      [configId]: !prev[configId]
+    }));
   };
-
-  const imapSetupMutation = useMutation({
-    mutationFn: (config: typeof imapConfig) => apiRequest('POST', '/api/email-accounts/imap', config),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
-      setShowImapDialog(false);
-      setImapConfig({
-        email: '',
-        host: '',
-        port: 993,
-        user: '',
-        password: '',
-        tls: true,
-      });
-      toast({
-        title: "Success",
-        description: "IMAP account configured successfully",
-      });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to configure IMAP account",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Check for OAuth callback URLs on page load
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('gmail_connected') === 'true') {
-      connectGmailMutation.mutate();
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('microsoft_connected') === 'true') {
-      connectMicrosoftMutation.mutate();
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('gmail_error') === 'true' || urlParams.get('microsoft_error') === 'true') {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect email account. Please try again.",
-        variant: "destructive",
-      });
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [connectGmailMutation, connectMicrosoftMutation, toast]);
-
-  const handleImapSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    imapSetupMutation.mutate(imapConfig);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-6" data-testid="email-configuration-page">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Email Configuration</h1>
-          <p className="text-gray-600">Configure email accounts for PO monitoring</p>
-        </div>
-        <Button data-testid="add-email-account-button">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Email Account
-        </Button>
+    <div className="container mx-auto p-6 max-w-6xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Email Configuration</h1>
+        <p className="text-muted-foreground">
+          Manage email accounts and OAuth settings for automated purchase order processing
+        </p>
       </div>
 
-      {/* Connected Email Accounts */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Connected Email Accounts</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {emailAccounts?.map((account: any) => (
-            <div 
-              key={account.id}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-              data-testid={`email-account-${account.email}`}
-            >
-              <div className="flex items-center space-x-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  account.provider === 'gmail' ? 'bg-red-100' :
-                  account.provider === 'outlook' ? 'bg-blue-100' : 'bg-green-100'
-                }`}>
-                  {account.provider === 'gmail' && <FaGoogle className="text-red-600" />}
-                  {account.provider === 'outlook' && <FaMicrosoft className="text-blue-600" />}
-                  {account.provider === 'imap' && <Server className="text-green-600" />}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{account.email}</p>
-                  <p className="text-sm text-gray-500">Provider: {account.provider}</p>
-                  <Badge className={account.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                    <div className={`w-1.5 h-1.5 rounded-full mr-1 ${account.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-                    {account.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  data-testid={`test-connection-${account.id}`}
-                >
-                  <TestTube className="mr-2 h-4 w-4" />
-                  Test
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  data-testid={`configure-email-${account.id}`}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configure
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => deleteEmailMutation.mutate(account.id)}
-                  disabled={deleteEmailMutation.isPending}
-                  data-testid={`delete-email-${account.id}`}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove
-                </Button>
-              </div>
-            </div>
-          )) || (
-            <div className="text-center py-8 text-gray-500">
-              <Mail className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No email accounts configured</p>
-              <p className="text-sm">Add your first email account to start monitoring</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="accounts" className="flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            Email Accounts
+          </TabsTrigger>
+          <TabsTrigger value="oauth" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            OAuth Settings
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Add New Email Account */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Add New Email Account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Gmail OAuth */}
-            <button 
-              onClick={handleGmailConnect}
-              className="email-provider-btn p-6 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors group"
-              data-testid="connect-gmail-button"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-red-200">
-                  <FaGoogle className="text-red-600 text-xl" />
+        <TabsContent value="accounts" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5" />
+                Connected Email Accounts
+              </CardTitle>
+              <CardDescription>
+                Email accounts configured for monitoring purchase order emails
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {accountsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse h-16 bg-gray-100 rounded-lg dark:bg-gray-800" />
+                  ))}
                 </div>
-                <h4 className="font-medium text-gray-900 mb-1">Connect Gmail</h4>
-                <p className="text-sm text-gray-500">One-click OAuth setup</p>
-              </div>
-            </button>
-
-            {/* Outlook OAuth */}
-            <button 
-              onClick={handleMicrosoftConnect}
-              className="email-provider-btn p-6 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-              data-testid="connect-outlook-button"
-            >
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200">
-                  <FaMicrosoft className="text-blue-600 text-xl" />
+              ) : emailAccounts.length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No email accounts configured. Set up OAuth credentials first, then connect your email accounts.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {emailAccounts.map((account: any) => (
+                    <div 
+                      key={account.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Mail className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{account.email}</div>
+                          <div className="text-sm text-muted-foreground capitalize">
+                            {account.provider} • Last checked: {account.lastChecked ? new Date(account.lastChecked).toLocaleString() : 'Never'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={account.isActive ? 'default' : 'secondary'}>
+                          {account.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <h4 className="font-medium text-gray-900 mb-1">Connect Outlook</h4>
-                <p className="text-sm text-gray-500">Microsoft 365 integration</p>
-              </div>
-            </button>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {/* IMAP Configuration */}
-            <Dialog open={showImapDialog} onOpenChange={setShowImapDialog}>
-              <DialogTrigger asChild>
-                <button 
-                  className="email-provider-btn p-6 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors group"
-                  data-testid="configure-imap-button"
-                >
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-green-200">
-                      <Server className="text-green-600 text-xl" />
-                    </div>
-                    <h4 className="font-medium text-gray-900 mb-1">IMAP Setup</h4>
-                    <p className="text-sm text-gray-500">Custom email server</p>
-                  </div>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>IMAP Configuration</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleImapSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={imapConfig.email}
-                      onChange={(e) => setImapConfig({...imapConfig, email: e.target.value})}
-                      placeholder="user@example.com"
-                      required
+        <TabsContent value="oauth" className="space-y-6">
+          {/* OAuth Configuration Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Add OAuth Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure OAuth credentials for email providers. These settings enable secure authentication with Gmail and Microsoft services.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="provider"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Provider</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select provider" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="gmail">Gmail</SelectItem>
+                              <SelectItem value="microsoft">Microsoft/Outlook</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client ID</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter client ID" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="host">IMAP Host</Label>
-                    <Input
-                      id="host"
-                      value={imapConfig.host}
-                      onChange={(e) => setImapConfig({...imapConfig, host: e.target.value})}
-                      placeholder="imap.example.com"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="port">Port</Label>
-                      <Input
-                        id="port"
-                        type="number"
-                        value={imapConfig.port}
-                        onChange={(e) => setImapConfig({...imapConfig, port: parseInt(e.target.value)})}
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="tls"
-                        checked={imapConfig.tls}
-                        onCheckedChange={(checked) => setImapConfig({...imapConfig, tls: checked})}
-                      />
-                      <Label htmlFor="tls">Use TLS</Label>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="user">Username</Label>
-                    <Input
-                      id="user"
-                      value={imapConfig.user}
-                      onChange={(e) => setImapConfig({...imapConfig, user: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={imapConfig.password}
-                      onChange={(e) => setImapConfig({...imapConfig, password: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={imapSetupMutation.isPending}
-                    data-testid="setup-imap-submit"
-                  >
-                    {imapSetupMutation.isPending ? 'Setting up...' : 'Setup IMAP'}
+
+                  <FormField
+                    control={form.control}
+                    name="clientSecret"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Secret</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Enter client secret" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="redirectUri"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Redirect URI</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://your-domain.com/api/auth/callback" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This must match exactly what you configured in your OAuth provider
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="scopes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Scopes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="https://www.googleapis.com/auth/gmail.readonly, https://www.googleapis.com/auth/userinfo.email"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Comma-separated list of OAuth scopes. Leave empty to use defaults.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" disabled={createOAuthConfig.isPending}>
+                    {createOAuthConfig.isPending ? 'Creating...' : 'Create Configuration'}
                   </Button>
                 </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
+              </Form>
+            </CardContent>
+          </Card>
 
-      {/* Email Monitoring Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monitoring Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="check-interval">Check Interval</Label>
-              <Select defaultValue="5">
-                <SelectTrigger data-testid="check-interval-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Every 1 minute</SelectItem>
-                  <SelectItem value="5">Every 5 minutes</SelectItem>
-                  <SelectItem value="15">Every 15 minutes</SelectItem>
-                  <SelectItem value="30">Every 30 minutes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="notification-email">Failure Notification Email</Label>
-              <Input
-                id="notification-email"
-                type="email"
-                placeholder="admin@company.com"
-                data-testid="notification-email-input"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Existing OAuth Configurations */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                OAuth Configurations
+              </CardTitle>
+              <CardDescription>
+                Manage existing OAuth configurations for email providers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {oauthLoading ? (
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="animate-pulse h-20 bg-gray-100 rounded-lg dark:bg-gray-800" />
+                  ))}
+                </div>
+              ) : oauthConfigs.length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No OAuth configurations found. Create one above to get started with email integration.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {oauthConfigs.map((config: any) => (
+                    <div 
+                      key={config.id} 
+                      className="border rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            {config.provider === 'gmail' ? 
+                              <Mail className="w-5 h-5 text-primary" /> : 
+                              <Globe className="w-5 h-5 text-primary" />
+                            }
+                          </div>
+                          <div>
+                            <div className="font-medium capitalize">{config.provider} OAuth</div>
+                            <div className="text-sm text-muted-foreground">
+                              Client ID: {config.clientId?.slice(0, 20)}...
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={config.isActive ? 'default' : 'secondary'}>
+                            {config.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleShowSecret(config.id)}
+                          >
+                            {showSecrets[config.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteOAuthConfig.mutate(config.id)}
+                            disabled={deleteOAuthConfig.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {showSecrets[config.id] && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-gray-50 rounded-lg dark:bg-gray-900">
+                          <div>
+                            <Label className="text-sm font-medium">Client ID</Label>
+                            <div className="text-sm font-mono bg-white p-2 rounded border dark:bg-gray-800">
+                              {config.clientId}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Client Secret</Label>
+                            <div className="text-sm font-mono bg-white p-2 rounded border dark:bg-gray-800">
+                              {config.clientSecret || '****'}
+                            </div>
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label className="text-sm font-medium">Redirect URI</Label>
+                            <div className="text-sm font-mono bg-white p-2 rounded border dark:bg-gray-800">
+                              {config.redirectUri}
+                            </div>
+                          </div>
+                          {config.scopes && config.scopes.length > 0 && (
+                            <div className="md:col-span-2">
+                              <Label className="text-sm font-medium">Scopes</Label>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {config.scopes.map((scope: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs">
+                                    {scope}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Instructions Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Setup Instructions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Gmail OAuth Setup:</h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
+                  <li>Create a new project or select existing one</li>
+                  <li>Enable the Gmail API</li>
+                  <li>Create OAuth 2.0 credentials</li>
+                  <li>Add your redirect URI to authorized redirect URIs</li>
+                  <li>Copy Client ID and Client Secret to the form above</li>
+                </ol>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Microsoft OAuth Setup:</h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Go to <a href="https://portal.azure.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Azure Portal</a></li>
+                  <li>Navigate to Azure Active Directory &gt; App registrations</li>
+                  <li>Create a new app registration</li>
+                  <li>Add your redirect URI under Authentication</li>
+                  <li>Create a client secret under Certificates & secrets</li>
+                  <li>Add required API permissions (Mail.Read, User.Read)</li>
+                </ol>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

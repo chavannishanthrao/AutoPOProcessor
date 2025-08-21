@@ -9,6 +9,7 @@ import {
   processingLogs,
   notifications,
   extractedPOData,
+  oauthConfigurations,
   type User,
   type UpsertUser,
   type Tenant,
@@ -29,6 +30,8 @@ import {
   type InsertNotification,
   type ExtractedPOData,
   type InsertExtractedPOData,
+  type OauthConfiguration,
+  type InsertOauthConfiguration,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -89,6 +92,13 @@ export interface IStorage {
   // Extracted PO data operations
   getExtractedPOData(tenantId: string, userId?: string): Promise<ExtractedPOData[]>;
   createExtractedPOData(data: InsertExtractedPOData): Promise<ExtractedPOData>;
+
+  // OAuth configuration operations
+  getOauthConfigurations(tenantId: string): Promise<OauthConfiguration[]>;
+  getOauthConfiguration(tenantId: string, provider: string): Promise<OauthConfiguration | undefined>;
+  createOauthConfiguration(config: InsertOauthConfiguration): Promise<OauthConfiguration>;
+  updateOauthConfiguration(id: string, config: Partial<OauthConfiguration>): Promise<OauthConfiguration>;
+  deleteOauthConfiguration(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -365,6 +375,50 @@ export class DatabaseStorage implements IStorage {
   async createExtractedPOData(data: InsertExtractedPOData): Promise<ExtractedPOData> {
     const [extractedData] = await db.insert(extractedPOData).values(data).returning();
     return extractedData;
+  }
+
+  // OAuth configuration operations
+  async getOauthConfigurations(tenantId: string): Promise<OauthConfiguration[]> {
+    return db.select().from(oauthConfigurations).where(eq(oauthConfigurations.tenantId, tenantId));
+  }
+
+  async getOauthConfiguration(tenantId: string, provider: string): Promise<OauthConfiguration | undefined> {
+    const [config] = await db
+      .select()
+      .from(oauthConfigurations)
+      .where(and(
+        eq(oauthConfigurations.tenantId, tenantId),
+        eq(oauthConfigurations.provider, provider),
+        eq(oauthConfigurations.isActive, true)
+      ));
+    return config;
+  }
+
+  async createOauthConfiguration(config: InsertOauthConfiguration): Promise<OauthConfiguration> {
+    // Deactivate existing configuration for the same provider
+    await db
+      .update(oauthConfigurations)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(oauthConfigurations.tenantId, config.tenantId),
+        eq(oauthConfigurations.provider, config.provider)
+      ));
+
+    const [oauthConfig] = await db.insert(oauthConfigurations).values(config).returning();
+    return oauthConfig;
+  }
+
+  async updateOauthConfiguration(id: string, config: Partial<OauthConfiguration>): Promise<OauthConfiguration> {
+    const [updated] = await db
+      .update(oauthConfigurations)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(oauthConfigurations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOauthConfiguration(id: string): Promise<void> {
+    await db.delete(oauthConfigurations).where(eq(oauthConfigurations.id, id));
   }
 }
 
