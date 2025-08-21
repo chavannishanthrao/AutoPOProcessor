@@ -392,41 +392,58 @@ Response (true/false only):`;
         return null; // No AI config available, skip processing
       }
 
-      const prompt = `
-Extract purchase order information from the following text and return it as a JSON object.
+      const prompt = `Extract purchase order information from the following text and return ONLY a valid JSON object.
 
 Text to analyze:
 """
 ${text}
 """
 
-Please extract the following fields (return null for any field that cannot be found):
+Extract these fields (use null for missing values):
+- poNumber: Purchase Order number/ID
+- supplier: Supplier/Vendor name  
+- buyer: Buyer/Customer name or company
+- date: Order date in YYYY-MM-DD format
+- amount: Total amount as number (no currency symbols)
+- currency: Currency code (USD, EUR, GBP, etc.)
+- lineItems: Array of items with description, quantity, unitPrice, totalPrice
 
-{
-  "poNumber": "Purchase Order number/ID",
-  "supplier": "Supplier/Vendor name",
-  "buyer": "Buyer/Customer name or company",
-  "date": "Order date in YYYY-MM-DD format",
-  "amount": "Total amount as a number (no currency symbols)",
-  "currency": "Currency code (e.g., USD, EUR, GBP)",
-  "lineItems": [
-    {
-      "description": "Item description",
-      "quantity": "Quantity as number",
-      "unitPrice": "Unit price as number",
-      "totalPrice": "Line total as number"
-    }
-  ]
-}
+Respond with ONLY valid JSON in this exact format:
+{"poNumber":null,"supplier":null,"buyer":null,"date":null,"amount":null,"currency":null,"lineItems":[]}`;
 
-Return only the JSON object, no other text:`;
-
-      const response = await aiService.processWithOpenAI(prompt, aiConfig, 'gpt-3.5-turbo');
+      const response = await aiService.processWithOpenAI(prompt, aiConfig, aiConfig.modelName || 'gpt-4o');
       
       try {
-        return JSON.parse(response);
+        // Clean the response to extract only JSON
+        const cleanedResponse = response.trim();
+        let jsonStr = cleanedResponse;
+        
+        // Try to extract JSON from code blocks if present
+        const jsonMatch = cleanedResponse.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        } else if (cleanedResponse.startsWith('```') && cleanedResponse.endsWith('```')) {
+          jsonStr = cleanedResponse.slice(3, -3).trim();
+          if (jsonStr.startsWith('json\n')) {
+            jsonStr = jsonStr.slice(5);
+          }
+        }
+        
+        return JSON.parse(jsonStr);
       } catch (parseError) {
         console.error('Error parsing LLM JSON response:', parseError);
+        console.error('Raw response:', response);
+        
+        // Try to extract any valid JSON object from the response
+        try {
+          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+        } catch (secondError) {
+          console.error('Failed secondary JSON extraction:', secondError);
+        }
+        
         return null;
       }
     } catch (error) {
