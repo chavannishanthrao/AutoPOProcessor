@@ -59,27 +59,35 @@ class EmailProcessor {
 
   // Fetch emails from Gmail
   private async fetchGmailEmails(emailAccount: EmailAccount): Promise<EmailData[]> {
-    const accessToken = await oauthService.getValidAccessToken(emailAccount.id);
-    
-    const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: accessToken });
-    
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    
-    // Search for unread emails with attachments from the last 24 hours
-    const response = await gmail.users.messages.list({
-      userId: 'me',
-      q: 'is:unread has:attachment newer_than:1d',
-      maxResults: 20,
-    });
+    try {
+      console.log(`Getting access token for ${emailAccount.email}...`);
+      const accessToken = await oauthService.getValidAccessToken(emailAccount.id);
+      console.log(`Access token obtained: ${accessToken.substring(0, 10)}...`);
+      
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+      
+      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      
+      // Search for emails from the last 24 hours (including read emails for testing)
+      console.log(`Searching Gmail for emails from last 24 hours...`);
+      const response = await gmail.users.messages.list({
+        userId: 'me',
+        q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
+        maxResults: 20,
+      });
 
-    if (!response.data.messages) {
-      return [];
-    }
+      console.log(`Gmail API response: ${response.data.messages?.length || 0} messages found`);
+      
+      if (!response.data.messages) {
+        console.log('No messages found');
+        return [];
+      }
 
-    const emails: EmailData[] = [];
-    
-    for (const message of response.data.messages) {
+      const emails: EmailData[] = [];
+      
+      console.log(`Processing ${response.data.messages.length} Gmail messages...`);
+      for (const message of response.data.messages) {
       try {
         const email = await gmail.users.messages.get({
           userId: 'me',
@@ -94,7 +102,12 @@ class EmailProcessor {
 
         const attachments = await this.extractGmailAttachments(gmail, message.id!, email.data.payload);
         
-        if (attachments.length > 0) {
+        // Process emails with attachments OR those that look like PO emails
+        const isPotentialPO = subject.toLowerCase().includes('po') || 
+                             subject.toLowerCase().includes('purchase') || 
+                             subject.toLowerCase().includes('order');
+        
+        if (attachments.length > 0 || isPotentialPO) {
           emails.push({
             subject,
             from,
@@ -117,6 +130,10 @@ class EmailProcessor {
     }
 
     return emails;
+    } catch (error) {
+      console.error(`Error in fetchGmailEmails for ${emailAccount.email}:`, error);
+      throw error;
+    }
   }
 
   // Fetch emails from Outlook
