@@ -1,0 +1,80 @@
+    'x-request-id': 'req_38917b81b26a4128878df1f4fb2f6361',
+    'x-envoy-upstream-service-time': '30',
+    'cf-cache-status': 'DYNAMIC',
+    'set-cookie': '__cf_bm=XJi93LD15oW.lo84wx78XMiaRSH18fd7r5p2eFc6cHA-1755790071-1.0.1.1-7xif4qbPd0pWuS_kATKnl5Y4wzvU.5Ofq86bXj.eQgj_cwS60y3zkkTaf4NFQk0SrcEYkklf2dCGVcwaEqYSA0EZXMsEetFz7.yKycWmrDg; path=/; expires=Thu, 21-Aug-25 15:57:51 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None, _cfuvid=pkyrdpucIdHrjPSVuZ9QCWjxMhiAgYDPLXHsCH_Cc.k-1755790071669-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    server: 'cloudflare',
+    'cf-ray': '972b2824e8acdadf-ORD',
+    'alt-svc': 'h3=":443"; ma=86400'
+  },
+  requestID: 'req_38917b81b26a4128878df1f4fb2f6361',
+  error: {
+    message: 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************KcwA. You can find your API key at https://platform.openai.com/account/api-keys.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_api_key'
+  },
+  code: 'invalid_api_key',
+  param: null,
+  type: 'invalid_request_error'
+}
+Error checking if email is PO-related: Error: AI processing failed: 401 Incorrect API key provided: sk-proj-********************************************************************************************************************************************************KcwA. You can find your API key at https://platform.openai.com/account/api-keys.
+    at AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:147:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+Email not PO-related, skipping: PO #11112222
+Processing email: PO #2342 from Nishanth Rao <nirannishanth96@gmail.com>
+Error processing with OpenAI: AuthenticationError: 401 Incorrect API key provided: sk-proj-********************************************************************************************************************************************************KcwA. You can find your API key at https://platform.openai.com/account/api-keys.
+    at Function.generate (/home/runner/workspace/node_modules/openai/src/core/error.ts:76:14)
+    at OpenAI.makeStatusError (/home/runner/workspace/node_modules/openai/src/client.ts:445:28)
+    at OpenAI.makeRequest (/home/runner/workspace/node_modules/openai/src/client.ts:668:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:133:24)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11) {
+  status: 401,
+  headers: Headers {
+    date: 'Thu, 21 Aug 2025 15:27:51 GMT',
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': '414',
+    connection: 'keep-alive',
+    vary: 'Origin',
+    'x-request-id': 'req_3abd5643cbcd4645b12edf37f83558b5',
+    'x-envoy-upstream-service-time': '89',
+    'cf-cache-status': 'DYNAMIC',
+    'set-cookie': '__cf_bm=fQXNzTuujkYZ0eUJfvM437zfEvDV6rV.GJDWcFaDW64-1755790071-1.0.1.1-3mQykuujaAK1X_W82Ehry9JU_sNyo9zO_LQOZW9hXzrmjaBJ.2kFHmqxkzvd0LAb0_jyPTVDSPvzmIxpql6Z1VN_xSQMSfzfUAhJvdxaEzE; path=/; expires=Thu, 21-Aug-25 15:57:51 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None, _cfuvid=LFUi4Iz2qs6pXguk4c5nvgZF44GhGz0wj4jhx9JqWNA-1755790071934-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    server: 'cloudflare',
+    'cf-ray': '972b282c6daddadf-ORD',
+    'alt-svc': 'h3=":443"; ma=86400'
+  },
+  requestID: 'req_3abd5643cbcd4645b12edf37f83558b5',
+  error: {
+    message: 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************KcwA. You can find your API key at https://platform.openai.com/account/api-keys.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_api_key'
+  },
+  code: 'invalid_api_key',
+  param: null,
+  type: 'invalid_request_error'
+}
+Error checking if email is PO-related: Error: AI processing failed: 401 Incorrect API key provided: sk-proj-********************************************************************************************************************************************************KcwA. You can find your API key at https://platform.openai.com/account/api-keys.
+    at AIService.processWithOpenAI (/home/runner/workspace/server/services/aiService.ts:147:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.checkIfPurchaseOrderEmail (/home/runner/workspace/server/services/emailProcessor.ts:279:24)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:237:25)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+Email not PO-related, skipping: PO #2342
+3:27:54 PM [express] GET /api/user 304 in 126ms :: {"id":"6a6f52a4-7b44-420f-b846-a82a6335eaee","ema…
+3:27:55 PM [express] GET /api/dashboard/metrics 304 in 168ms :: {"totalPOs":0,"successRate":0,"avgPr…
+3:27:56 PM [express] GET /api/purchase-orders 304 in 169ms :: []
+WebSocket client connected

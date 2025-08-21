@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 import {
   Brain,
@@ -23,6 +24,8 @@ import {
   CheckCircle,
   Settings,
   AlertTriangle,
+  Edit,
+  Key,
 } from "lucide-react";
 
 export default function AISettings() {
@@ -40,6 +43,36 @@ export default function AISettings() {
   const { data: aiConfigurations, isLoading } = useQuery({
     queryKey: ['/api/ai-configurations'],
     retry: false,
+  });
+
+  const updateAiConfigMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      apiRequest('PATCH', `/api/ai-configurations/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-configurations'] });
+      toast({
+        title: "Success",
+        description: "AI configuration updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update AI configuration",
+        variant: "destructive",
+      });
+    },
   });
 
   const addAiConfigMutation = useMutation({
@@ -297,11 +330,38 @@ export default function AISettings() {
                           Active
                         </Badge>
                       )}
+                      {!config.apiKey && (
+                        <Badge className="bg-red-100 text-red-800">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          API Key Required
+                        </Badge>
+                      )}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            data-testid={`configure-ai-${config.id}`}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Configure
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Configure {config.provider} AI Settings</DialogTitle>
+                            <DialogDescription>
+                              Update the API key and model settings for {config.provider}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <ConfigureAIForm config={config} onUpdate={updateAiConfigMutation.mutate} />
+                        </DialogContent>
+                      </Dialog>
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => testAiConnectionMutation.mutate(config.id)}
-                        disabled={testAiConnectionMutation.isPending}
+                        disabled={testAiConnectionMutation.isPending || !config.apiKey}
                         data-testid={`test-ai-${config.id}`}
                       >
                         <TestTube className="mr-2 h-4 w-4" />
@@ -495,5 +555,139 @@ export default function AISettings() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function ConfigureAIForm({ config, onUpdate }: { config: any; onUpdate: (data: { id: string; data: any }) => void }) {
+  const [formData, setFormData] = useState({
+    apiKey: config.apiKey || '',
+    modelName: config.modelName || '',
+    maxTokens: config.maxTokens || 4096,
+    temperature: config.temperature || 0.1,
+    isActive: config.isActive || false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdate({ id: config.id, data: formData });
+  };
+
+  const getApiKeyPlaceholder = (provider: string) => {
+    switch (provider) {
+      case 'openai':
+        return 'sk-proj-...';
+      case 'anthropic':
+        return 'sk-ant-...';
+      case 'custom':
+        return 'your-api-key';
+      default:
+        return 'Enter API key';
+    }
+  };
+
+  const getDefaultModels = (provider: string) => {
+    switch (provider) {
+      case 'openai':
+        return ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo'];
+      case 'anthropic':
+        return ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'];
+      default:
+        return [];
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="api-key">
+          <Key className="inline-block w-4 h-4 mr-2" />
+          API Key
+        </Label>
+        <Input
+          id="api-key"
+          type="password"
+          value={formData.apiKey}
+          onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+          placeholder={getApiKeyPlaceholder(config.provider)}
+          required
+          data-testid="api-key-input"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Your API key will be stored securely and encrypted.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="model-name">Model Name</Label>
+        {getDefaultModels(config.provider).length > 0 ? (
+          <Select 
+            value={formData.modelName} 
+            onValueChange={(value) => setFormData({ ...formData, modelName: value })}
+          >
+            <SelectTrigger data-testid="model-select">
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {getDefaultModels(config.provider).map((model) => (
+                <SelectItem key={model} value={model}>{model}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            id="model-name"
+            value={formData.modelName}
+            onChange={(e) => setFormData({ ...formData, modelName: e.target.value })}
+            placeholder="Enter model name"
+            required
+            data-testid="model-name-input"
+          />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="max-tokens">Max Tokens</Label>
+          <Input
+            id="max-tokens"
+            type="number"
+            value={formData.maxTokens}
+            onChange={(e) => setFormData({ ...formData, maxTokens: parseInt(e.target.value) })}
+            min={1}
+            max={32000}
+            data-testid="max-tokens-config-input"
+          />
+        </div>
+        <div>
+          <Label htmlFor="temperature">Temperature</Label>
+          <Input
+            id="temperature"
+            type="number"
+            step="0.1"
+            min="0"
+            max="2"
+            value={formData.temperature}
+            onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) })}
+            data-testid="temperature-input"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch 
+          id="is-active"
+          checked={formData.isActive}
+          onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+          data-testid="is-active-switch"
+        />
+        <Label htmlFor="is-active">Enable this configuration</Label>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="submit" data-testid="save-ai-config-button">
+          Save Configuration
+        </Button>
+      </div>
+    </form>
   );
 }

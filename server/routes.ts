@@ -578,6 +578,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/ai-configurations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const aiConfigs = await storage.getAiConfigurations(user.tenantId);
+      const existingConfig = aiConfigs.find(config => config.id === req.params.id);
+      
+      if (!existingConfig) {
+        return res.status(404).json({ message: "AI configuration not found" });
+      }
+
+      const updateData = {
+        ...req.body,
+        tenantId: user.tenantId,
+      };
+
+      const updatedConfig = await storage.updateAiConfiguration(req.params.id, updateData);
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Error updating AI configuration:", error);
+      res.status(500).json({ message: "Failed to update AI configuration" });
+    }
+  });
+
   app.post('/api/ai-configurations/:id/test', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
