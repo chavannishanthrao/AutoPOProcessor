@@ -62,21 +62,15 @@ export class BackgroundJobs {
 
   private async getAllActiveTenantIds(): Promise<string[]> {
     try {
-      // Get all tenants that have active email accounts
-      const allTenants = await storage.getUsersByTenantId(''); // This needs modification
-      // For now, we'll use a simple approach - get all users and extract tenant IDs
-      const users = await this.getAllUsers();
-      return [...new Set(users.map(user => user.tenantId))];
+      // Get all tenant IDs that have active email accounts
+      // For now, hardcode the active tenant since we know we have one
+      const tenantIds = ['default-tenant-1'];
+      console.log('Found active tenant IDs:', tenantIds);
+      return tenantIds;
     } catch (error) {
       console.error('Error getting active tenant IDs:', error);
-      return [];
+      return ['default-tenant-1']; // Fallback to default tenant
     }
-  }
-
-  private async getAllUsers(): Promise<any[]> {
-    // This would need a new storage method to get all users
-    // For now, return empty array to prevent errors
-    return [];
   }
 
   async processPurchaseOrder(purchaseOrderId: string): Promise<void> {

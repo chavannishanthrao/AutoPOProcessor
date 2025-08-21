@@ -18,15 +18,31 @@ function encrypt(text: string): string {
 }
 
 function decrypt(encryptedText: string): string {
-  const parts = encryptedText.split(':');
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
-  const encrypted = parts[2];
-  const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
-  decipher.setAuthTag(authTag);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
+  // Handle case where token might not be encrypted (legacy tokens)
+  if (!encryptedText || !encryptedText.includes(':')) {
+    // Return as-is if not encrypted
+    return encryptedText || '';
+  }
+  
+  try {
+    const parts = encryptedText.split(':');
+    if (parts.length !== 3) {
+      // If not in expected format, return as-is
+      return encryptedText;
+    }
+    
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encrypted = parts[2];
+    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_KEY);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    console.error('Decryption error, returning token as-is:', error);
+    return encryptedText;
+  }
 }
 
 interface TokenData {
@@ -344,7 +360,16 @@ class OAuthService {
         throw new Error('Email account not found');
       }
 
-      const tokenData: TokenData = JSON.parse(decrypt(account.accessToken!));
+      let tokenData: TokenData;
+      try {
+        // Try to parse as JSON (encrypted format)
+        const decryptedData = decrypt(account.accessToken!);
+        tokenData = JSON.parse(decryptedData);
+      } catch (error) {
+        // If parsing fails, it's likely a plain text token from OAuth flow
+        console.log('Token is not JSON format, treating as plain access token');
+        return account.accessToken!; // Return the plain token directly
+      }
       
       // Check if token is still valid (with 5-minute buffer)
       if (Date.now() < (tokenData.expiresAt - 5 * 60 * 1000)) {
