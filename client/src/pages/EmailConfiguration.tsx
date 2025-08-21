@@ -13,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Settings, Globe, Mail, AlertCircle, Check, X, Edit3, Trash2, Save, Eye, EyeOff } from 'lucide-react';
+import { Plus, Settings, Globe, Mail, AlertCircle, Check, X, Edit3, Trash2, Save, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { FaGoogle, FaMicrosoft } from 'react-icons/fa';
 
 // OAuth Configuration Schema
 const oauthConfigSchema = z.object({
@@ -28,7 +29,98 @@ const oauthConfigSchema = z.object({
 
 type OAuthConfigFormData = z.infer<typeof oauthConfigSchema>;
 
-export default function EmailConfigurationNew() {
+// ConnectEmailButton Component
+function ConnectEmailButton({ provider, oauthConfigs }: { provider: 'gmail' | 'microsoft', oauthConfigs: any[] }) {
+  const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
+  
+  const config = oauthConfigs.find(c => c.provider === provider && c.isActive);
+  const hasConfig = !!config;
+  
+  const handleConnect = async () => {
+    if (!hasConfig) {
+      toast({
+        title: "OAuth Configuration Required",
+        description: `Please configure ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} OAuth credentials first in the OAuth Settings tab.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsConnecting(true);
+    try {
+      const authEndpoint = provider === 'gmail' ? '/api/auth/gmail' : '/api/auth/microsoft';
+      const response = await fetch(authEndpoint);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to get auth URL');
+      }
+      
+      // Open OAuth flow in new window
+      window.open(data.authUrl, '_blank', 'width=500,height=600');
+      
+      toast({
+        title: "OAuth Flow Started",
+        description: `Please complete the ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} authentication in the popup window.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Connection Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+  
+  const providerIcon = provider === 'gmail' ? <FaGoogle className="w-4 h-4" /> : <FaMicrosoft className="w-4 h-4" />;
+  const providerName = provider === 'gmail' ? 'Gmail' : 'Microsoft';
+  
+  return (
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            {providerIcon}
+          </div>
+          <div>
+            <div className="font-medium">{providerName}</div>
+            <div className="text-sm text-muted-foreground">
+              {hasConfig ? 'OAuth configured' : 'OAuth configuration required'}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasConfig ? (
+            <Badge variant="default">Ready</Badge>
+          ) : (
+            <Badge variant="secondary">Not configured</Badge>
+          )}
+        </div>
+      </div>
+      
+      <Button 
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className="w-full"
+        variant={hasConfig ? "default" : "outline"}
+      >
+        {isConnecting ? 'Connecting...' : `Connect ${providerName}`}
+        <ExternalLink className="w-4 h-4 ml-2" />
+      </Button>
+      
+      {!hasConfig && (
+        <p className="text-xs text-muted-foreground">
+          Configure OAuth credentials in the OAuth Settings tab first
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function EmailConfiguration() {
   const [activeTab, setActiveTab] = useState('accounts');
   const [editingConfig, setEditingConfig] = useState<string | null>(null);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
@@ -153,6 +245,26 @@ export default function EmailConfigurationNew() {
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-6">
+          {/* Connect Email Accounts Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Connect Email Accounts
+              </CardTitle>
+              <CardDescription>
+                Connect your email accounts to start monitoring purchase order emails
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ConnectEmailButton provider="gmail" oauthConfigs={oauthConfigs} />
+                <ConnectEmailButton provider="microsoft" oauthConfigs={oauthConfigs} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Connected Email Accounts */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -174,7 +286,7 @@ export default function EmailConfigurationNew() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No email accounts configured. Set up OAuth credentials first, then connect your email accounts.
+                    No email accounts connected yet. Use the connection buttons above to connect your accounts.
                   </AlertDescription>
                 </Alert>
               ) : (
