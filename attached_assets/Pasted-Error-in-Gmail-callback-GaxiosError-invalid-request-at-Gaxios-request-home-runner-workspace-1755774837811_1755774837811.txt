@@ -1,0 +1,96 @@
+Error in Gmail callback: GaxiosError: invalid_request
+    at Gaxios._request (/home/runner/workspace/node_modules/gaxios/src/gaxios.ts:211:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async OAuth2Client.getTokenAsync (/home/runner/workspace/node_modules/google-auth-library/build/src/auth/oauth2client.js:205:21)
+    at async EmailService.handleGmailCallback (/home/runner/workspace/server/services/emailService.ts:298:24)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:171:22) {
+  config: {
+    retry: true,
+    retryConfig: {
+      httpMethodsToRetry: [Array],
+      currentRetryAttempt: 0,
+      retry: 3,
+      noResponseRetries: 2,
+      retryDelayMultiplier: 2,
+      timeOfFirstRequest: 1755774820836,
+      totalTimeout: 9007199254740991,
+      maxRetryDelay: 9007199254740991,
+      statusCodesToRetry: [Array]
+    },
+    method: 'POST',
+    url: URL {
+      href: 'https://oauth2.googleapis.com/token',
+      origin: 'https://oauth2.googleapis.com',
+      protocol: 'https:',
+      username: '',
+      password: '',
+      host: 'oauth2.googleapis.com',
+      hostname: 'oauth2.googleapis.com',
+      port: '',
+      pathname: '/token',
+      search: '',
+      searchParams: URLSearchParams {},
+      hash: ''
+    },
+    data: URLSearchParams {
+      'code' => '4/0AVMBsJgrxSGGIx3DHlMvG192voCV13KIn5kQQ_NoWGAs-BeZVR_uoyVJeUoNjSMLgsntTg',
+      'grant_type' => '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+      'redirect_uri' => 'http://localhost:5000/api/auth/gmail/callback' },
+    headers: Headers {
+      'x-goog-api-client': 'gl-node/20.19.3',
+      'User-Agent': 'google-api-nodejs-client/10.2.1'
+    },
+    body: URLSearchParams {
+      'code' => '4/0AVMBsJgrxSGGIx3DHlMvG192voCV13KIn5kQQ_NoWGAs-BeZVR_uoyVJeUoNjSMLgsntTg',
+      'grant_type' => '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+      'redirect_uri' => 'http://localhost:5000/api/auth/gmail/callback' },
+    validateStatus: [Function: validateStatus],
+    responseType: 'unknown',
+    errorRedactor: [Function: defaultErrorRedactor],
+    duplex: 'half'
+  },
+  response: Response {
+    size: 0,
+    data: {
+      error: 'invalid_request',
+      error_description: 'Could not determine client ID from request.'
+    },
+    config: {
+      retry: true,
+      retryConfig: [Object],
+      method: 'POST',
+      url: URL {},
+      data: [Object],
+      headers: Headers {
+        'x-goog-api-client': 'gl-node/20.19.3',
+        'User-Agent': 'google-api-nodejs-client/10.2.1'
+      },
+      body: [Object],
+      validateStatus: [Function: validateStatus],
+      responseType: 'unknown',
+      errorRedactor: [Function: defaultErrorRedactor],
+      duplex: 'half'
+    },
+    [Symbol(Body internals)]: {
+      body: [Gunzip],
+      stream: [Gunzip],
+      boundary: null,
+      disturbed: true,
+      error: null
+    },
+    [Symbol(Response internals)]: {
+      type: 'default',
+      url: 'https://oauth2.googleapis.com/token',
+      status: 400,
+      statusText: 'Bad Request',
+      headers: [Object],
+      counter: 0,
+      highWaterMark: 16384
+    }
+  },
+  code: 400,
+  status: 400,
+  error: undefined,
+  [Symbol(gaxios-gaxios-error)]: '7.1.1',
+  [cause]: { message: 'invalid_request', code: 400, status: 'Bad Request' }
+}
