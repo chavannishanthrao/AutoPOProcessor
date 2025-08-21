@@ -82,7 +82,7 @@ class EmailProcessor {
           maxResults: 20,
         });
       } catch (error: any) {
-        // If we get a 401 error, try refreshing the token once
+        // Handle authentication errors
         if (error.code === 401) {
           console.log(`Got 401 error, attempting token refresh for ${emailAccount.email}...`);
           accessToken = await oauthService.handleTokenRefreshOnError(emailAccount.id);
@@ -93,6 +93,9 @@ class EmailProcessor {
             q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
             maxResults: 20,
           });
+        } else if (error.code === 403) {
+          console.error(`Gmail permission error for ${emailAccount.email}:`, error.message);
+          throw new Error(`Gmail account needs to be reconnected with updated permissions. Please disconnect and reconnect your Gmail account in the Email Configuration page.`);
         } else {
           throw error;
         }
