@@ -1,0 +1,29 @@
+You are an expert software engineer. I want you to build a new module called "Email Configuration" inside my existing application (React frontend + Python FastAPI backend, deployed in Replit).
+
+Requirements:
+1. Do not touch my main application login. This must be a standalone module accessible from a menu item called "Email Configuration."
+2. When the user clicks "Connect Mailbox," they should be able to authenticate with either Gmail (OAuth2) or Outlook (Microsoft Graph OAuth2) using my company's MS_CLIENT_ID and MS_CLIENT_SECRET.
+3. After authentication, securely store tokens in PostgreSQL (encrypted with Fernet key).
+4. Implement a background scheduler (Celery or APScheduler) that runs every 5 minutes:
+   - Fetch unread emails from the user’s mailbox.
+   - If an email contains an attachment, check via LLM whether the email is related to Purchase Orders.
+   - If yes, download the attachment (PDF or image), perform OCR (use Tesseract or Azure Document Intelligence if configured).
+   - Convert extracted text into structured JSON output using LLM (fields: PO_Number, Supplier, Buyer, Date, Amount, Currency, Line_Items).
+   - Save this structured data in the database.
+5. Provide an API endpoint: `/email-config/results` → returns detected PO data for each user.
+6. Provide React frontend pages:
+   - **Email Configuration Page** → button to connect mailbox.
+   - **Results Page** → table/grid showing extracted PO data.
+7. Ensure production readiness:
+   - Tokens are refreshed automatically before expiry.
+   - Handle OAuth callback routes securely.
+   - Add error handling, logging, retry for failed email fetches.
+   - Ensure multi-user support (each user only sees their own mailbox results).
+   - Keep module self-contained but integrated into the existing application.
+
+Deliverables:
+- FastAPI backend code (OAuth, token storage, scheduler, OCR, LLM processing).
+- React frontend components for mailbox connection & results.
+- Database schema migration script.
+- Instructions to configure ENV variables (MS_CLIENT_ID, MS_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OPENAI_API_KEY, ENCRYPTION_KEY).
+- Example deployment instructions for Replit.

@@ -154,6 +154,31 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Extracted PO data from email processing
+export const extractedPOData = pgTable("extracted_po_data", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  emailAccountId: varchar("email_account_id").notNull(),
+  emailSubject: varchar("email_subject"),
+  emailFrom: varchar("email_from"),
+  emailDate: timestamp("email_date"),
+  poNumber: varchar("po_number"),
+  supplier: varchar("supplier"),
+  buyer: varchar("buyer"),
+  date: timestamp("date"),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  currency: varchar("currency").default("USD"),
+  lineItems: jsonb("line_items"), // Array of line items
+  attachmentName: varchar("attachment_name"),
+  extractedText: text("extracted_text"), // OCR result
+  llmResponse: jsonb("llm_response"), // Full LLM structured output
+  processingStatus: varchar("processing_status").default("completed"), // completed, failed, pending
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -203,6 +228,11 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
 });
+export const insertExtractedPODataSchema = createInsertSchema(extractedPOData).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -225,3 +255,5 @@ export type ProcessingLog = typeof processingLogs.$inferSelect;
 export type InsertProcessingLog = z.infer<typeof insertProcessingLogSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type ExtractedPOData = typeof extractedPOData.$inferSelect;
+export type InsertExtractedPOData = z.infer<typeof insertExtractedPODataSchema>;

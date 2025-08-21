@@ -1,118 +1,95 @@
-import fs from 'fs';
-import path from 'path';
-import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
-import tesseract from 'tesseract.js';
+import * as mammoth from 'mammoth';
+import Tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 
-export class DocumentProcessor {
-  async extractText(attachment: any): Promise<string> {
-    const mimeType = attachment.mimeType;
-    const data = attachment.data; // Base64 or buffer data
-    
-    switch (mimeType) {
-      case 'application/pdf':
-        return this.extractFromPDF(data);
-      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-      case 'application/msword':
-        return this.extractFromWord(data);
-      case 'image/jpeg':
-      case 'image/png':
-      case 'image/tiff':
-        return this.extractFromImage(data);
-      case 'text/plain':
-        return this.extractFromText(data);
-      default:
-        throw new Error(`Unsupported file type: ${mimeType}`);
+class DocumentProcessor {
+  private tesseractWorker: Tesseract.Worker | null = null;
+
+  async initializeTesseract(): Promise<void> {
+    if (!this.tesseractWorker) {
+      this.tesseractWorker = await createWorker('eng');
     }
   }
 
-  private async extractFromPDF(data: Buffer | string): Promise<string> {
+  async extractText(data: Buffer, contentType: string, filename: string): Promise<string> {
     try {
-      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'base64');
-      const pdfData = await pdf(buffer);
-      return pdfData.text;
+      console.log(`Extracting text from ${filename} (${contentType})`);
+
+      if (contentType === 'application/pdf') {
+        return await this.extractFromPDF(data);
+      } else if (contentType.startsWith('image/')) {
+        return await this.extractFromImage(data);
+      } else if (contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        return await this.extractFromDocx(data);
+      } else {
+        console.log(`Unsupported content type: ${contentType}`);
+        return '';
+      }
     } catch (error) {
-      throw new Error(`Failed to extract text from PDF: ${error.message}`);
+      console.error(`Error extracting text from ${filename}:`, error);
+      return '';
     }
   }
 
-  private async extractFromWord(data: Buffer | string): Promise<string> {
+  private async extractFromPDF(data: Buffer): Promise<string> {
     try {
-      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'base64');
-      const result = await mammoth.extractRawText({ buffer });
+      // Use a safer import for pdf-parse
+      const pdfParse = await import('pdf-parse/lib/pdf-parse.js');
+      const pdf = await pdfParse.default(data);
+      return pdf.text;
+    } catch (error) {
+      console.error('Error extracting PDF text:', error);
+      // Fallback to OCR for PDFs if parsing fails
+      return await this.extractFromImage(data);
+    }
+  }
+
+  private async extractFromImage(data: Buffer): Promise<string> {
+    try {
+      await this.initializeTesseract();
+      if (!this.tesseractWorker) {
+        throw new Error('Tesseract worker not initialized');
+      }
+
+      const { data: { text } } = await this.tesseractWorker.recognize(data);
+      return text.trim();
+    } catch (error) {
+      console.error('Error extracting image text:', error);
+      return '';
+    }
+  }
+
+  private async extractFromDocx(data: Buffer): Promise<string> {
+    try {
+      const result = await mammoth.extractRawText({ buffer: data });
       return result.value;
     } catch (error) {
-      throw new Error(`Failed to extract text from Word document: ${error.message}`);
+      console.error('Error extracting DOCX text:', error);
+      return '';
     }
   }
 
-  private async extractFromImage(data: Buffer | string): Promise<string> {
-    try {
-      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'base64');
-      
-      // Use Tesseract.js for OCR
-      const { data: { text } } = await tesseract.recognize(buffer, 'eng', {
-        logger: m => console.log(m)
-      });
-      
-      return text;
-    } catch (error) {
-      throw new Error(`Failed to extract text from image: ${error.message}`);
+  async cleanup(): Promise<void> {
+    if (this.tesseractWorker) {
+      await this.tesseractWorker.terminate();
+      this.tesseractWorker = null;
     }
-  }
-
-  private extractFromText(data: Buffer | string): string {
-    if (Buffer.isBuffer(data)) {
-      return data.toString('utf-8');
-    }
-    return Buffer.from(data, 'base64').toString('utf-8');
-  }
-
-  async validateDocumentQuality(text: string, minLength = 100): Promise<{
-    isValid: boolean;
-    confidence: number;
-    issues: string[];
-  }> {
-    const issues: string[] = [];
-    let confidence = 1.0;
-
-    // Check minimum length
-    if (text.length < minLength) {
-      issues.push(`Document too short (${text.length} characters)`);
-      confidence -= 0.3;
-    }
-
-    // Check for garbled text (high ratio of non-alphabetic characters)
-    const alphabeticChars = (text.match(/[a-zA-Z]/g) || []).length;
-    const totalChars = text.length;
-    const alphabeticRatio = alphabeticChars / totalChars;
-
-    if (alphabeticRatio < 0.5) {
-      issues.push('High ratio of non-alphabetic characters detected');
-      confidence -= 0.4;
-    }
-
-    // Check for common OCR indicators
-    const hasNumbers = /\d/.test(text);
-    const hasCurrency = /[\$£€¥]/.test(text);
-    const hasCommonPOTerms = /(purchase|order|po|invoice|total|amount|vendor|supplier)/i.test(text);
-
-    if (!hasNumbers) {
-      issues.push('No numeric values found');
-      confidence -= 0.2;
-    }
-
-    if (!hasCurrency && !hasCommonPOTerms) {
-      issues.push('No purchase order indicators found');
-      confidence -= 0.2;
-    }
-
-    return {
-      isValid: confidence > 0.5,
-      confidence: Math.max(0, confidence),
-      issues
-    };
   }
 }
 
 export const documentProcessor = new DocumentProcessor();
+
+// Cleanup on process exit
+process.on('exit', () => {
+  documentProcessor.cleanup();
+});
+
+process.on('SIGINT', () => {
+  documentProcessor.cleanup();
+  process.exit();
+});
+
+process.on('SIGTERM', () => {
+  documentProcessor.cleanup();
+  process.exit();
+});

@@ -16,6 +16,7 @@ import Administration from "@/pages/Administration";
 import EmailConfiguration from "@/pages/EmailConfiguration";
 import ERPIntegration from "@/pages/ERPIntegration";
 import AISettings from "@/pages/AISettings";
+import POResults from "@/pages/POResults";
 import Layout from "@/components/Layout";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
           <Route path="/email-config" component={EmailConfiguration} />
           <Route path="/erp-config" component={ERPIntegration} />
           <Route path="/ai-settings" component={AISettings} />
+          <Route path="/results" component={POResults} />
         </Layout>
       )}
       <Route component={NotFound} />

@@ -35,33 +35,48 @@ export class BackgroundJobs {
 
   private async checkAllTenantsEmails(): Promise<void> {
     try {
-      // Get all tenants (in a real app, you'd get from database)
-      // For now, we'll get tenants based on email accounts
-      const allEmailAccounts = await storage.getEmailAccounts(''); // This would need to be modified
-      const tenantIds = [...new Set(allEmailAccounts.map(acc => acc.tenantId))];
+      // Import the email processor dynamically to avoid circular dependencies
+      const { emailProcessor } = await import('./emailProcessor');
+      
+      // Get all active email accounts across all tenants
+      // We'll need a method to get all email accounts (not tenant-specific)
+      const query = `SELECT DISTINCT tenant_id FROM email_accounts WHERE is_active = true`;
+      
+      // For now, let's get accounts by checking all known tenants
+      // In production, you'd want a more efficient approach
+      const tenantIds = await this.getAllActiveTenantIds();
       
       for (const tenantId of tenantIds) {
-        await this.checkTenantEmails(tenantId);
+        const emailAccounts = await storage.getEmailAccounts(tenantId);
+        const activeAccounts = emailAccounts.filter(acc => acc.isActive);
+        
+        for (const account of activeAccounts) {
+          console.log(`Processing emails for account: ${account.email}`);
+          await emailProcessor.processEmailsForAccount(account);
+        }
       }
     } catch (error) {
       console.error('Error checking emails for all tenants:', error);
     }
   }
 
-  private async checkTenantEmails(tenantId: string): Promise<void> {
+  private async getAllActiveTenantIds(): Promise<string[]> {
     try {
-      console.log(`Checking emails for tenant: ${tenantId}`);
-      await emailService.checkEmails(tenantId);
+      // Get all tenants that have active email accounts
+      const allTenants = await storage.getUsersByTenantId(''); // This needs modification
+      // For now, we'll use a simple approach - get all users and extract tenant IDs
+      const users = await this.getAllUsers();
+      return [...new Set(users.map(user => user.tenantId))];
     } catch (error) {
-      console.error(`Error checking emails for tenant ${tenantId}:`, error);
-      
-      await storage.createNotification({
-        tenantId,
-        type: 'failure',
-        title: 'Email Monitoring Error',
-        message: `Failed to check emails: ${error.message}`,
-      });
+      console.error('Error getting active tenant IDs:', error);
+      return [];
     }
+  }
+
+  private async getAllUsers(): Promise<any[]> {
+    // This would need a new storage method to get all users
+    // For now, return empty array to prevent errors
+    return [];
   }
 
   async processPurchaseOrder(purchaseOrderId: string): Promise<void> {

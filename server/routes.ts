@@ -7,6 +7,8 @@ import { emailService } from "./services/emailService";
 import { aiService } from "./services/aiService";
 import { erpService } from "./services/erpService";
 import { backgroundJobs } from "./services/backgroundJobs";
+import { oauthService } from "./services/oauthService";
+import { emailProcessor } from "./services/emailProcessor";
 import { insertEmailAccountSchema, insertErpSystemSchema, insertAiConfigurationSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -454,6 +456,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking notification as read:", error);
       res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Extracted PO data results
+  app.get('/api/email-config/results', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const extractedData = await storage.getExtractedPOData(user.tenantId, userId);
+      res.json(extractedData);
+    } catch (error) {
+      console.error("Error fetching extracted PO data:", error);
+      res.status(500).json({ message: "Failed to fetch extracted PO data" });
+    }
+  });
+
+  // Trigger manual email processing for a specific account
+  app.post('/api/email-accounts/:id/process', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const emailAccount = await storage.getEmailAccount(req.params.id);
+      if (!emailAccount || emailAccount.tenantId !== user.tenantId) {
+        return res.status(404).json({ message: "Email account not found" });
+      }
+
+      // Trigger email processing for this account
+      emailProcessor.processEmailsForAccount(emailAccount).catch(error => {
+        console.error(`Background email processing failed for ${emailAccount.email}:`, error);
+      });
+
+      res.json({ message: 'Email processing started' });
+    } catch (error) {
+      console.error("Error triggering email processing:", error);
+      res.status(500).json({ message: "Failed to trigger email processing" });
     }
   });
 

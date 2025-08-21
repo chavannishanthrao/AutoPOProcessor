@@ -8,6 +8,7 @@ import {
   vendors,
   processingLogs,
   notifications,
+  extractedPOData,
   type User,
   type UpsertUser,
   type Tenant,
@@ -26,6 +27,8 @@ import {
   type InsertProcessingLog,
   type Notification,
   type InsertNotification,
+  type ExtractedPOData,
+  type InsertExtractedPOData,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -43,9 +46,11 @@ export interface IStorage {
   
   // Email account operations
   getEmailAccounts(tenantId: string): Promise<EmailAccount[]>;
+  getEmailAccount(id: string): Promise<EmailAccount | undefined>;
   createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount>;
   updateEmailAccount(id: string, account: Partial<EmailAccount>): Promise<EmailAccount>;
   deleteEmailAccount(id: string): Promise<void>;
+  getUsersByTenantId(tenantId: string): Promise<User[]>;
   
   // ERP system operations
   getErpSystems(tenantId: string): Promise<ErpSystem[]>;
@@ -80,6 +85,10 @@ export interface IStorage {
   getNotifications(tenantId: string, userId?: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<void>;
+  
+  // Extracted PO data operations
+  getExtractedPOData(tenantId: string, userId?: string): Promise<ExtractedPOData[]>;
+  createExtractedPOData(data: InsertExtractedPOData): Promise<ExtractedPOData>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -130,6 +139,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(emailAccounts).where(eq(emailAccounts.tenantId, tenantId));
   }
 
+  async getEmailAccount(id: string): Promise<EmailAccount | undefined> {
+    const [account] = await db.select().from(emailAccounts).where(eq(emailAccounts.id, id));
+    return account;
+  }
+
   async createEmailAccount(account: InsertEmailAccount): Promise<EmailAccount> {
     const [emailAccount] = await db.insert(emailAccounts).values(account).returning();
     return emailAccount;
@@ -146,6 +160,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEmailAccount(id: string): Promise<void> {
     await db.delete(emailAccounts).where(eq(emailAccounts.id, id));
+  }
+
+  async getUsersByTenantId(tenantId: string): Promise<User[]> {
+    return db.select().from(users).where(eq(users.tenantId, tenantId));
   }
   
   // ERP system operations
@@ -328,6 +346,25 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.id, id));
+  }
+  
+  // Extracted PO data operations
+  async getExtractedPOData(tenantId: string, userId?: string): Promise<ExtractedPOData[]> {
+    let query = db
+      .select()
+      .from(extractedPOData)
+      .where(eq(extractedPOData.tenantId, tenantId));
+    
+    if (userId) {
+      query = query.where(eq(extractedPOData.userId, userId));
+    }
+    
+    return query.orderBy(desc(extractedPOData.createdAt));
+  }
+
+  async createExtractedPOData(data: InsertExtractedPOData): Promise<ExtractedPOData> {
+    const [extractedData] = await db.insert(extractedPOData).values(data).returning();
+    return extractedData;
   }
 }
 

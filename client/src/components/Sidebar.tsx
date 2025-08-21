@@ -12,11 +12,13 @@ import {
   LifeBuoy,
   Bot,
   ChevronRight,
+  CheckSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
+  { name: "PO Results", href: "/results", icon: CheckSquare },
   { 
     name: "Real-Time Monitor", 
     href: "/realtime", 
