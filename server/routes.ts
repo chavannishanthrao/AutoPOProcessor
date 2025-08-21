@@ -152,7 +152,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code, state } = req.query;
       if (!code) {
-        return res.status(400).json({ message: "Authorization code required" });
+        return res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>OAuth Error</title></head>
+            <body>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ type: 'oauth-error', provider: 'gmail', error: 'Authorization code required' }, '*');
+                }
+                window.close();
+              </script>
+            </body>
+          </html>
+        `);
       }
 
       const tokens = await emailService.handleGmailCallback(code as string);
@@ -160,10 +173,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the connection in session for later association with user
       req.session.gmailTokens = tokens;
       
-      res.redirect('/?gmail_connected=true');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Gmail Connected</title></head>
+          <body>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+              <div style="text-align: center;">
+                <h2 style="color: #10B981;">✓ Gmail Connected Successfully!</h2>
+                <p>You can close this window.</p>
+              </div>
+            </div>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'oauth-success', provider: 'gmail' }, '*');
+              }
+              setTimeout(() => window.close(), 2000);
+            </script>
+          </body>
+        </html>
+      `);
     } catch (error) {
       console.error("Error in Gmail callback:", error);
-      res.redirect('/?gmail_error=true');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>OAuth Error</title></head>
+          <body>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+              <div style="text-align: center;">
+                <h2 style="color: #EF4444;">✗ Gmail Connection Failed</h2>
+                <p>Please try again. You can close this window.</p>
+              </div>
+            </div>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'oauth-error', provider: 'gmail', error: '${error.message}' }, '*');
+              }
+              setTimeout(() => window.close(), 3000);
+            </script>
+          </body>
+        </html>
+      `);
     }
   });
 
@@ -214,7 +265,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code, state } = req.query;
       if (!code) {
-        return res.status(400).json({ message: "Authorization code required" });
+        return res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>OAuth Error</title></head>
+            <body>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ type: 'oauth-error', provider: 'microsoft', error: 'Authorization code required' }, '*');
+                }
+                window.close();
+              </script>
+            </body>
+          </html>
+        `);
       }
 
       const tokens = await emailService.handleMicrosoftCallback(code as string);
@@ -222,10 +286,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the connection in session for later association with user
       req.session.microsoftTokens = tokens;
       
-      res.redirect('/?microsoft_connected=true');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Microsoft Connected</title></head>
+          <body>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+              <div style="text-align: center;">
+                <h2 style="color: #10B981;">✓ Microsoft Connected Successfully!</h2>
+                <p>You can close this window.</p>
+              </div>
+            </div>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'oauth-success', provider: 'microsoft' }, '*');
+              }
+              setTimeout(() => window.close(), 2000);
+            </script>
+          </body>
+        </html>
+      `);
     } catch (error) {
       console.error("Error in Microsoft callback:", error);
-      res.redirect('/?microsoft_error=true');
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>OAuth Error</title></head>
+          <body>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+              <div style="text-align: center;">
+                <h2 style="color: #EF4444;">✗ Microsoft Connection Failed</h2>
+                <p>Please try again. You can close this window.</p>
+              </div>
+            </div>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ type: 'oauth-error', provider: 'microsoft', error: '${error.message}' }, '*');
+              }
+              setTimeout(() => window.close(), 3000);
+            </script>
+          </body>
+        </html>
+      `);
     }
   });
 

@@ -70,13 +70,16 @@ function ConnectEmailButton({ provider, oauthConfigs }: { provider: 'gmail' | 'm
         description: `Please complete the ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} authentication in the popup window.`,
       });
       
-      // Poll for popup closure and check for success parameters
-      const pollTimer = setInterval(async () => {
-        try {
-          if (popup.closed) {
-            clearInterval(pollTimer);
-            
-            // Check if we have tokens in session by trying to connect
+      // Listen for messages from the OAuth popup
+      const messageHandler = async (event: MessageEvent) => {
+        // Only accept messages from our domain
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+        
+        if (event.data.type === 'oauth-success' && event.data.provider === provider) {
+          // OAuth was successful, now try to connect the email account
+          try {
             const connectEndpoint = provider === 'gmail' 
               ? '/api/email-accounts/gmail/connect' 
               : '/api/email-accounts/outlook/connect';
@@ -99,35 +102,55 @@ function ConnectEmailButton({ provider, oauthConfigs }: { provider: 'gmail' | 'm
               queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
             } else {
               const error = await connectResponse.json();
-              if (error.message?.includes('No Gmail tokens found') || error.message?.includes('No Microsoft tokens found')) {
-                // User probably cancelled or didn't complete the flow
-                toast({
-                  title: "Connection Cancelled",
-                  description: "The OAuth flow was not completed. Please try again.",
-                  variant: "destructive",
-                });
-              } else {
-                throw new Error(error.message || 'Failed to connect email account');
-              }
+              throw new Error(error.message || 'Failed to connect email account');
             }
-            setIsConnecting(false);
+          } catch (error: any) {
+            console.error('OAuth connection error:', error);
+            toast({
+              title: "Connection Failed",
+              description: error.message || 'An error occurred while connecting the email account',
+              variant: "destructive",
+            });
           }
-        } catch (error: any) {
-          clearInterval(pollTimer);
+          
+          window.removeEventListener('message', messageHandler);
           setIsConnecting(false);
-          console.error('OAuth connection error:', error);
+        } else if (event.data.type === 'oauth-error' && event.data.provider === provider) {
           toast({
-            title: "Connection Failed",
-            description: error.message || 'An error occurred while connecting the email account',
+            title: "OAuth Error",
+            description: event.data.error || 'OAuth authentication failed',
             variant: "destructive",
           });
+          window.removeEventListener('message', messageHandler);
+          setIsConnecting(false);
+        }
+      };
+      
+      window.addEventListener('message', messageHandler);
+      
+      // Also poll for popup closure as fallback
+      const pollTimer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollTimer);
+          window.removeEventListener('message', messageHandler);
+          
+          // If we get here without receiving a message, the user probably cancelled
+          if (isConnecting) {
+            toast({
+              title: "Connection Cancelled",
+              description: "The OAuth flow was cancelled or not completed.",
+              variant: "destructive",
+            });
+            setIsConnecting(false);
+          }
         }
       }, 1000);
       
       // Safety timeout to prevent infinite polling
       setTimeout(() => {
-        if (!popup.closed) {
-          clearInterval(pollTimer);
+        clearInterval(pollTimer);
+        window.removeEventListener('message', messageHandler);
+        if (isConnecting) {
           setIsConnecting(false);
         }
       }, 300000); // 5 minutes timeout

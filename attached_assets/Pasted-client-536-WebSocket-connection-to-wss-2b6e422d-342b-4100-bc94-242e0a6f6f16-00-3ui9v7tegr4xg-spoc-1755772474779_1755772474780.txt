@@ -1,0 +1,23 @@
+client:536 WebSocket connection to 'wss://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/?token=joiH_2eXkh7L' failed: 
+setupWebSocket @ client:536Understand this error
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=joiH_2eXkh7L' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)Understand this error
+chunk-RPCDYKBN.js?v=488f8a85:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+chunk-RPCDYKBN.js?v=488f8a85:521 Warning: validateDOMNesting(...): <a> cannot appear as a descendant of <a>.
+    at a
+    at a
+    at https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=488f8a85:337:18
+    at div
+    at nav
+    at div
+    at Sidebar (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/src/components/Sidebar.tsx:60:22)
+    at div
+    at Layout (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/src/components/Layout.tsx:29:34)
+    at Switch (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=488f8a85:379:17)
+    at Router (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/src/App.tsx?v=gIpz3QGgoTsTDMergfNnh:38:42)
+    at Provider (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-S34NKWM7.js?v=488f8a85:48:15)
+    at TooltipProvider (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=488f8a85:61:5)
+    at AuthProvider (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/src/hooks/useAuth.tsx:23:32)
+    at QueryClientProvider (https://2b6e422d-342b-4100-bc94-242e0a6f6f16-00-3ui9v7tegr4xg.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=488f8a85:2805:3)
