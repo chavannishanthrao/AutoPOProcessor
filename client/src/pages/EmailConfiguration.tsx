@@ -33,6 +33,7 @@ type OAuthConfigFormData = z.infer<typeof oauthConfigSchema>;
 function ConnectEmailButton({ provider, oauthConfigs }: { provider: 'gmail' | 'microsoft', oauthConfigs: any[] }) {
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
+  const queryClient = useQueryClient();
   
   const config = oauthConfigs.find(c => c.provider === provider && c.isActive);
   const hasConfig = !!config;
@@ -57,21 +58,87 @@ function ConnectEmailButton({ provider, oauthConfigs }: { provider: 'gmail' | 'm
         throw new Error(data.message || 'Failed to get auth URL');
       }
       
-      // Open OAuth flow in new window
-      window.open(data.authUrl, '_blank', 'width=500,height=600');
+      // Open OAuth flow in popup window
+      const popup = window.open(data.authUrl, 'oauth-popup', 'width=500,height=600,scrollbars=yes,resizable=yes');
+      
+      if (!popup) {
+        throw new Error('Popup blocked by browser. Please allow popups for this site.');
+      }
       
       toast({
         title: "OAuth Flow Started",
         description: `Please complete the ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} authentication in the popup window.`,
       });
+      
+      // Poll for popup closure and check for success parameters
+      const pollTimer = setInterval(async () => {
+        try {
+          if (popup.closed) {
+            clearInterval(pollTimer);
+            
+            // Check if we have tokens in session by trying to connect
+            const connectEndpoint = provider === 'gmail' 
+              ? '/api/email-accounts/gmail/connect' 
+              : '/api/email-accounts/outlook/connect';
+              
+            const connectResponse = await fetch(connectEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (connectResponse.ok) {
+              const emailAccount = await connectResponse.json();
+              toast({
+                title: "Email Account Connected!",
+                description: `Successfully connected ${emailAccount.email}`,
+              });
+              
+              // Refresh the email accounts list
+              queryClient.invalidateQueries({ queryKey: ['/api/email-accounts'] });
+            } else {
+              const error = await connectResponse.json();
+              if (error.message?.includes('No Gmail tokens found') || error.message?.includes('No Microsoft tokens found')) {
+                // User probably cancelled or didn't complete the flow
+                toast({
+                  title: "Connection Cancelled",
+                  description: "The OAuth flow was not completed. Please try again.",
+                  variant: "destructive",
+                });
+              } else {
+                throw new Error(error.message || 'Failed to connect email account');
+              }
+            }
+            setIsConnecting(false);
+          }
+        } catch (error: any) {
+          clearInterval(pollTimer);
+          setIsConnecting(false);
+          console.error('OAuth connection error:', error);
+          toast({
+            title: "Connection Failed",
+            description: error.message || 'An error occurred while connecting the email account',
+            variant: "destructive",
+          });
+        }
+      }, 1000);
+      
+      // Safety timeout to prevent infinite polling
+      setTimeout(() => {
+        if (!popup.closed) {
+          clearInterval(pollTimer);
+          setIsConnecting(false);
+        }
+      }, 300000); // 5 minutes timeout
+      
     } catch (error: any) {
+      setIsConnecting(false);
       toast({
         title: "Connection Error",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsConnecting(false);
     }
   };
   
