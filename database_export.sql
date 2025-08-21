@@ -310,10 +310,6 @@ COPY public.ai_configurations (id, tenant_id, provider, model_name, api_key, end
 -- Data for Name: email_accounts; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.email_accounts (id, tenant_id, email, provider, access_token, refresh_token, imap_config, is_active, last_checked, created_at, updated_at) FROM stdin;
-f1a70719-6974-4141-b233-c2d98825ac5d	default-tenant-1	chavannishanthrao@gmail.com	gmail	ya29.A0AS3H6Ny9TIVkEVolffaUI0DbdFB9Cb06-mRefiQ6VveyW1rp1WE5QI8IHar53o58L1tbSVj0wKr2psiQvSjJlWrEIUs6I0yCWlXsjqXFnig2jMc21YROrRmwFOEHchkazYtINYGPkeHckoEhVJjro8RxIN2odcA3Kfq1ud_LHoEhDe1ZMiOLnZzlfc5ik_TC-sy7cC4aCgYKAbsSARcSFQHGX2MiTGNyENwsT_DAmBblcxauWg0206	1//06hRHeUzvXhk9CgYIARAAGAYSNwF-L9IrN89t1F7wQYyyExIQ7uOGq-HKF53t5UZVyjajNqn7yZbx_b6UEyvbCpRnU7vdOne34Bw	\N	t	2025-08-21 11:44:57.558	2025-08-21 11:15:45.061499	2025-08-21 11:44:57.566733
-\.
-
 
 --
 -- Data for Name: erp_systems; Type: TABLE DATA; Schema: public; Owner: neondb_owner
