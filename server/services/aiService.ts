@@ -129,16 +129,26 @@ Extract all available information. Use null for missing fields.`
   async processWithOpenAI(prompt: string, config: AiConfiguration, modelName?: string): Promise<string> {
     try {
       const client = this.getClient(config);
+      const model = modelName || config.modelName;
+      
+      // Use JSON mode for gpt-4 and newer models for better structured responses
+      const useJsonMode = model.includes('gpt-4') || model.includes('gpt-3.5-turbo');
       
       const response = await client.chat.completions.create({
-        model: modelName || config.modelName,
+        model: model,
         messages: [
+          {
+            role: "system",
+            content: "You are a data extraction assistant. Respond with valid JSON only, no explanations."
+          },
           {
             role: "user",
             content: prompt
           }
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
+        temperature: 0.1,
+        ...(useJsonMode ? { response_format: { type: "json_object" } } : {})
       });
 
       return response.choices[0].message.content || '';

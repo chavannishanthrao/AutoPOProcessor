@@ -1,0 +1,34 @@
+Processing emails for account: chavannishanthrao@gmail.com
+Processing emails for chavannishanthrao@gmail.com (gmail)
+Getting access token for chavannishanthrao@gmail.com...
+Token is not JSON format, treating as plain access token
+Access token obtained: ya29.A0AS3...
+Searching Gmail for emails from last 24 hours...
+Gmail API response: 2 messages found
+Processing 2 Gmail messages...
+Processing email: PO #11112222 from Nishanth Rao <nirannishanth96@gmail.com>
+Processing attachment: po-2.pdf
+Extracting text from po-2.pdf (application/pdf)
+Error parsing LLM JSON response: SyntaxError: Expected double-quoted property name in JSON at position 1177
+    at JSON.parse (<anonymous>)
+    at EmailProcessor.extractPurchaseOrderData (/home/runner/workspace/server/services/emailProcessor.ts:427:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.processAttachment (/home/runner/workspace/server/services/emailProcessor.ts:322:30)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:247:9)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+    at async Timeout._onTimeout (/home/runner/workspace/server/services/backgroundJobs.ts:16:7)
+No structured PO data found in po-2.pdf
+Processing email: PO #2342 from Nishanth Rao <nirannishanth96@gmail.com>
+Processing attachment: po-2.pdf
+Extracting text from po-2.pdf (application/pdf)
+Error parsing LLM JSON response: SyntaxError: Unterminated string in JSON at position 1444
+    at JSON.parse (<anonymous>)
+    at EmailProcessor.extractPurchaseOrderData (/home/runner/workspace/server/services/emailProcessor.ts:427:21)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async EmailProcessor.processAttachment (/home/runner/workspace/server/services/emailProcessor.ts:322:30)
+    at async EmailProcessor.processEmail (/home/runner/workspace/server/services/emailProcessor.ts:247:9)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:41:9)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+    at async Timeout._onTimeout (/home/runner/workspace/server/services/backgroundJobs.ts:16:7)
+No structured PO data found in po-2.pdf

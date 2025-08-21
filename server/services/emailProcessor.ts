@@ -392,58 +392,76 @@ Response (true/false only):`;
         return null; // No AI config available, skip processing
       }
 
-      const prompt = `Extract purchase order information from the following text and return ONLY a valid JSON object.
+      const prompt = `You are a JSON extraction expert. Extract purchase order information from the text below.
 
-Text to analyze:
-"""
-${text}
-"""
+Text: ${text}
 
-Extract these fields (use null for missing values):
-- poNumber: Purchase Order number/ID
-- supplier: Supplier/Vendor name  
-- buyer: Buyer/Customer name or company
-- date: Order date in YYYY-MM-DD format
-- amount: Total amount as number (no currency symbols)
-- currency: Currency code (USD, EUR, GBP, etc.)
-- lineItems: Array of items with description, quantity, unitPrice, totalPrice
+Return ONLY valid JSON without any explanation, formatting, or code blocks. Extract these fields (use null if not found):
 
-Respond with ONLY valid JSON in this exact format:
-{"poNumber":null,"supplier":null,"buyer":null,"date":null,"amount":null,"currency":null,"lineItems":[]}`;
+{"poNumber": "PO number", "supplier": "vendor name", "buyer": "customer name", "date": "YYYY-MM-DD", "amount": 0, "currency": "USD", "lineItems": [{"description": "item", "quantity": 1, "unitPrice": 0, "totalPrice": 0}]}
+
+JSON:`;
 
       const response = await aiService.processWithOpenAI(prompt, aiConfig, aiConfig.modelName || 'gpt-4o');
       
       try {
-        // Clean the response to extract only JSON
-        const cleanedResponse = response.trim();
-        let jsonStr = cleanedResponse;
+        // Multiple strategies to extract valid JSON
+        console.log('Raw AI response:', response);
         
-        // Try to extract JSON from code blocks if present
-        const jsonMatch = cleanedResponse.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
-        } else if (cleanedResponse.startsWith('```') && cleanedResponse.endsWith('```')) {
-          jsonStr = cleanedResponse.slice(3, -3).trim();
-          if (jsonStr.startsWith('json\n')) {
-            jsonStr = jsonStr.slice(5);
-          }
+        const cleanedResponse = response.trim();
+        
+        // Strategy 1: Direct parsing if it's already clean JSON
+        try {
+          return JSON.parse(cleanedResponse);
+        } catch {}
+        
+        // Strategy 2: Extract from code blocks
+        const codeBlockMatch = cleanedResponse.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (codeBlockMatch) {
+          try {
+            return JSON.parse(codeBlockMatch[1]);
+          } catch {}
         }
         
-        return JSON.parse(jsonStr);
+        // Strategy 3: Find first complete JSON object
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0]);
+          } catch {}
+        }
+        
+        // Strategy 4: Extract JSON after "JSON:" prompt
+        const afterJsonMatch = cleanedResponse.match(/JSON:\s*(\{[\s\S]*?\})/i);
+        if (afterJsonMatch) {
+          try {
+            return JSON.parse(afterJsonMatch[1]);
+          } catch {}
+        }
+        
+        // Strategy 5: Clean up common JSON formatting issues
+        let fixedJson = cleanedResponse
+          .replace(/```json\s*/g, '')
+          .replace(/```\s*/g, '')
+          .replace(/\n/g, ' ')
+          .trim();
+        
+        // Find the JSON object boundaries
+        const start = fixedJson.indexOf('{');
+        const end = fixedJson.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && end > start) {
+          fixedJson = fixedJson.substring(start, end + 1);
+          try {
+            return JSON.parse(fixedJson);
+          } catch {}
+        }
+        
+        console.error('All JSON parsing strategies failed for response:', response);
+        return null;
+        
       } catch (parseError) {
         console.error('Error parsing LLM JSON response:', parseError);
         console.error('Raw response:', response);
-        
-        // Try to extract any valid JSON object from the response
-        try {
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
-          }
-        } catch (secondError) {
-          console.error('Failed secondary JSON extraction:', secondError);
-        }
-        
         return null;
       }
     } catch (error) {
