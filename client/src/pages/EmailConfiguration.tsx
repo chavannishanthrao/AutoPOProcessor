@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -44,28 +44,6 @@ export default function EmailConfiguration() {
     queryKey: ['/api/email-accounts'],
     retry: false,
   });
-
-  // Check for OAuth callback URLs on page load
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('gmail_connected') === 'true') {
-      connectGmailMutation.mutate();
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('microsoft_connected') === 'true') {
-      connectMicrosoftMutation.mutate();
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('gmail_error') === 'true' || urlParams.get('microsoft_error') === 'true') {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect email account. Please try again.",
-        variant: "destructive",
-      });
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
 
   const deleteEmailMutation = useMutation({
     mutationFn: (id: string) => apiRequest('DELETE', `/api/email-accounts/${id}`),
@@ -241,6 +219,28 @@ export default function EmailConfiguration() {
       });
     },
   });
+
+  // Check for OAuth callback URLs on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('gmail_connected') === 'true') {
+      connectGmailMutation.mutate();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('microsoft_connected') === 'true') {
+      connectMicrosoftMutation.mutate();
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('gmail_error') === 'true' || urlParams.get('microsoft_error') === 'true') {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect email account. Please try again.",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [connectGmailMutation, connectMicrosoftMutation, toast]);
 
   const handleImapSubmit = (e: React.FormEvent) => {
     e.preventDefault();
