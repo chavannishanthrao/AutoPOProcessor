@@ -1,0 +1,105 @@
+Error processing emails for chavannishanthrao@gmail.com: GaxiosError: Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.
+    at Gaxios._request (/home/runner/workspace/node_modules/gaxios/src/gaxios.ts:211:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async OAuth2Client.requestAsync (/home/runner/workspace/node_modules/google-auth-library/build/src/auth/oauth2client.js:463:20)
+    at async createAPIRequestAsync (/home/runner/workspace/node_modules/googleapis-common/build/src/apirequest.js:308:25)
+    at async EmailProcessor.fetchGmailEmails (/home/runner/workspace/server/services/emailProcessor.ts:74:24)
+    at async EmailProcessor.processEmailsForAccount (/home/runner/workspace/server/services/emailProcessor.ts:32:18)
+    at async BackgroundJobs.checkAllTenantsEmails (/home/runner/workspace/server/services/backgroundJobs.ts:55:11)
+    at async Timeout._onTimeout (/home/runner/workspace/server/services/backgroundJobs.ts:16:7) {
+  config: {
+    url: URL {
+      href: 'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than%3A1d%20%28has%3Aattachment%20OR%20subject%3APO%20OR%20subject%3A%22purchase%20order%22%20OR%20subject%3A%22order%22%29&maxResults=20',
+      origin: 'https://gmail.googleapis.com',
+      protocol: 'https:',
+      username: '',
+      password: '',
+      host: 'gmail.googleapis.com',
+      hostname: 'gmail.googleapis.com',
+      port: '',
+      pathname: '/gmail/v1/users/me/messages',
+      search: '?q=newer_than%3A1d%20%28has%3Aattachment%20OR%20subject%3APO%20OR%20subject%3A%22purchase%20order%22%20OR%20subject%3A%22order%22%29&maxResults=20',
+      searchParams: URLSearchParams {
+        'q' => 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
+        'maxResults' => '20' },
+      hash: ''
+    },
+    method: 'GET',
+    apiVersion: '',
+    userAgentDirectives: [ [Object] ],
+    paramsSerializer: [Function (anonymous)],
+    headers: Headers {
+      'accept-encoding': 'gzip',
+      authorization: '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+      'user-agent': 'google-api-nodejs-client/8.0.0 (gzip)',
+      'x-goog-api-client': 'gdcl/8.0.0 gl-node/20.19.3'
+    },
+    params: {
+      q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
+      maxResults: 20
+    },
+    validateStatus: [Function (anonymous)],
+    retry: true,
+    responseType: 'unknown',
+    errorRedactor: [Function: defaultErrorRedactor],
+    retryConfig: {
+      currentRetryAttempt: 0,
+      retry: 3,
+      httpMethodsToRetry: [Array],
+      noResponseRetries: 2,
+      retryDelayMultiplier: 2,
+      timeOfFirstRequest: 1755794364388,
+      totalTimeout: 9007199254740991,
+      maxRetryDelay: 9007199254740991,
+      statusCodesToRetry: [Array]
+    }
+  },
+  response: Response {
+    size: 0,
+    data: { error: [Object] },
+    config: {
+      url: URL {},
+      method: 'GET',
+      apiVersion: '',
+      userAgentDirectives: [Array],
+      paramsSerializer: [Function (anonymous)],
+      headers: Headers {
+        'accept-encoding': 'gzip',
+        authorization: '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+        'user-agent': 'google-api-nodejs-client/8.0.0 (gzip)',
+        'x-goog-api-client': 'gdcl/8.0.0 gl-node/20.19.3'
+      },
+      params: [Object],
+      validateStatus: [Function (anonymous)],
+      retry: true,
+      responseType: 'unknown',
+      errorRedactor: [Function: defaultErrorRedactor]
+    },
+    [Symbol(Body internals)]: {
+      body: [Gunzip],
+      stream: [Gunzip],
+      boundary: null,
+      disturbed: true,
+      error: null
+    },
+    [Symbol(Response internals)]: {
+      type: 'default',
+      url: 'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than%3A1d%20%28has%3Aattachment%20OR%20subject%3APO%20OR%20subject%3A%22purchase%20order%22%20OR%20subject%3A%22order%22%29&maxResults=20',
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: [Object],
+      counter: 0,
+      highWaterMark: 16384
+    }
+  },
+  code: 401,
+  status: 401,
+  error: undefined,
+  [Symbol(gaxios-gaxios-error)]: '7.1.1',
+  [cause]: {
+    message: 'Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.',
+    code: 401,
+    status: 'UNAUTHENTICATED',
+    errors: [ [Object] ]
+  }
+}

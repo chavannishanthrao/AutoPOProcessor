@@ -61,21 +61,42 @@ class EmailProcessor {
   private async fetchGmailEmails(emailAccount: EmailAccount): Promise<EmailData[]> {
     try {
       console.log(`Getting access token for ${emailAccount.email}...`);
-      const accessToken = await oauthService.getValidAccessToken(emailAccount.id);
+      let accessToken = await oauthService.getValidAccessToken(emailAccount.id);
       console.log(`Access token obtained: ${accessToken.substring(0, 10)}...`);
       
-      const oauth2Client = new google.auth.OAuth2();
-      oauth2Client.setCredentials({ access_token: accessToken });
+      const createGmailClient = (token: string) => {
+        const oauth2Client = new google.auth.OAuth2();
+        oauth2Client.setCredentials({ access_token: token });
+        return google.gmail({ version: 'v1', auth: oauth2Client });
+      };
       
-      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      let gmail = createGmailClient(accessToken);
+      let response;
       
-      // Search for emails from the last 24 hours (including read emails for testing)
-      console.log(`Searching Gmail for emails from last 24 hours...`);
-      const response = await gmail.users.messages.list({
-        userId: 'me',
-        q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
-        maxResults: 20,
-      });
+      try {
+        // Search for emails from the last 24 hours (including read emails for testing)
+        console.log(`Searching Gmail for emails from last 24 hours...`);
+        response = await gmail.users.messages.list({
+          userId: 'me',
+          q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
+          maxResults: 20,
+        });
+      } catch (error: any) {
+        // If we get a 401 error, try refreshing the token once
+        if (error.code === 401) {
+          console.log(`Got 401 error, attempting token refresh for ${emailAccount.email}...`);
+          accessToken = await oauthService.handleTokenRefreshOnError(emailAccount.id);
+          console.log(`Token refreshed, retrying Gmail API call...`);
+          gmail = createGmailClient(accessToken);
+          response = await gmail.users.messages.list({
+            userId: 'me',
+            q: 'newer_than:1d (has:attachment OR subject:PO OR subject:"purchase order" OR subject:"order")',
+            maxResults: 20,
+          });
+        } else {
+          throw error;
+        }
+      }
 
       console.log(`Gmail API response: ${response.data.messages?.length || 0} messages found`);
       

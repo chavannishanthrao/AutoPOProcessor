@@ -280,30 +280,41 @@ class OAuthService {
         throw new Error('Invalid email account');
       }
 
-      const tokenData: TokenData = JSON.parse(decrypt(account.accessToken!));
+      // Create OAuth client with tenant-specific configuration
+      const googleOAuth2Client = await this.createGoogleOAuth2Client(account.tenantId);
       
-      this.googleOAuth2Client.setCredentials({
-        refresh_token: decrypt(account.refreshToken!),
+      // Get the refresh token
+      const refreshToken = decrypt(account.refreshToken!);
+      console.log(`Attempting to refresh Google tokens for ${account.email}...`);
+      
+      googleOAuth2Client.setCredentials({
+        refresh_token: refreshToken,
       });
 
-      const { credentials } = await this.googleOAuth2Client.refreshAccessToken();
+      const { credentials } = await googleOAuth2Client.refreshAccessToken();
+      
+      if (!credentials.access_token) {
+        throw new Error('No access token received from Google');
+      }
       
       const newTokenData: TokenData = {
-        accessToken: credentials.access_token!,
-        refreshToken: credentials.refresh_token || tokenData.refreshToken,
-        expiresAt: credentials.expiry_date!,
+        accessToken: credentials.access_token,
+        refreshToken: credentials.refresh_token || refreshToken,
+        expiresAt: credentials.expiry_date || (Date.now() + 3600000), // 1 hour default
       };
 
+      // Update the account with new encrypted tokens
       await storage.updateEmailAccount(emailAccountId, {
         accessToken: encrypt(JSON.stringify(newTokenData)),
         refreshToken: encrypt(newTokenData.refreshToken),
         lastChecked: new Date(),
       });
 
+      console.log(`Successfully refreshed Google tokens for ${account.email}`);
       return newTokenData.accessToken;
     } catch (error) {
       console.error('Error refreshing Google tokens:', error);
-      throw new Error('Failed to refresh Gmail tokens');
+      throw new Error(`Failed to refresh Gmail tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -361,6 +372,8 @@ class OAuthService {
       }
 
       let tokenData: TokenData;
+      let isPlainToken = false;
+      
       try {
         // Try to parse as JSON (encrypted format)
         const decryptedData = decrypt(account.accessToken!);
@@ -368,13 +381,17 @@ class OAuthService {
       } catch (error) {
         // If parsing fails, it's likely a plain text token from OAuth flow
         console.log('Token is not JSON format, treating as plain access token');
-        return account.accessToken!; // Return the plain token directly
+        isPlainToken = true;
+        // For plain tokens, we can't check expiry, so we'll try to use it and refresh on failure
+        return account.accessToken!;
       }
       
       // Check if token is still valid (with 5-minute buffer)
       if (Date.now() < (tokenData.expiresAt - 5 * 60 * 1000)) {
         return tokenData.accessToken;
       }
+
+      console.log(`Token expired for ${account.email}, attempting refresh...`);
 
       // Token needs refresh
       if (account.provider === 'gmail') {
@@ -388,6 +405,24 @@ class OAuthService {
       console.error('Error getting valid access token:', error);
       throw error;
     }
+  }
+
+  // Method to refresh token when API calls fail with 401
+  async handleTokenRefreshOnError(emailAccountId: string): Promise<string> {
+    const account = await storage.getEmailAccount(emailAccountId);
+    if (!account) {
+      throw new Error('Email account not found');
+    }
+
+    console.log(`Forcing token refresh for ${account.email} due to API error...`);
+
+    if (account.provider === 'gmail') {
+      return await this.refreshGoogleTokens(emailAccountId);
+    } else if (account.provider === 'outlook') {
+      return await this.refreshMicrosoftTokens(emailAccountId);
+    }
+
+    throw new Error('Unsupported email provider for token refresh');
   }
 }
 
