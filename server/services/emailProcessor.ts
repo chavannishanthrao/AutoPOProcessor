@@ -257,6 +257,9 @@ class EmailProcessor {
   private async processEmail(email: EmailData, emailAccount: EmailAccount): Promise<void> {
     console.log(`Processing email: ${email.subject} from ${email.from}`);
     
+    // Create initial processing log for email detection
+    const processingStartTime = Date.now();
+    
     // First, check if email is related to Purchase Orders using LLM
     const isPoRelated = await this.checkIfPurchaseOrderEmail(email, emailAccount);
     
@@ -342,8 +345,24 @@ Is this a purchase order email? Reply only "true" or "false".`;
     email: EmailData, 
     emailAccount: EmailAccount
   ): Promise<void> {
+    const startTime = Date.now();
+    let processingLogId: string | undefined;
+    
     try {
       console.log(`Processing attachment: ${attachment.filename}`);
+      
+      // Create initial processing log entry
+      processingLogId = await storage.createProcessingLog({
+        tenantId: emailAccount.tenantId,
+        stage: 'ocr_processing',
+        status: 'started', 
+        startTime: new Date(startTime),
+        details: {
+          emailSubject: email.subject,
+          attachmentName: attachment.filename,
+          emailFrom: email.from
+        }
+      });
       
       // Extract text from attachment using OCR/document processing
       const extractedText = await documentProcessor.extractText(
@@ -354,15 +373,71 @@ Is this a purchase order email? Reply only "true" or "false".`;
 
       if (!extractedText.trim()) {
         console.log(`No text extracted from ${attachment.filename}, skipping`);
+        // Update log to failed
+        if (processingLogId) {
+          await storage.updateProcessingLog(processingLogId, {
+            status: 'failed',
+            endTime: new Date(),
+            duration: Date.now() - startTime,
+            errorMessage: 'No text could be extracted from attachment'
+          });
+        }
         return;
       }
+
+      // Update log to show OCR completed, AI processing started
+      if (processingLogId) {
+        await storage.updateProcessingLog(processingLogId, {
+          status: 'completed',
+          endTime: new Date(),
+          duration: Date.now() - startTime
+        });
+      }
+
+      // Create AI processing log
+      const aiStartTime = Date.now();
+      const aiLogId = await storage.createProcessingLog({
+        tenantId: emailAccount.tenantId,
+        stage: 'data_extraction',
+        status: 'started',
+        startTime: new Date(aiStartTime),
+        details: {
+          emailSubject: email.subject,
+          attachmentName: attachment.filename,
+          textLength: extractedText.length
+        }
+      });
 
       // Use LLM to extract structured PO data
       const structuredData = await this.extractPurchaseOrderData(extractedText, emailAccount);
       
       if (!structuredData) {
         console.log(`No structured PO data found in ${attachment.filename}`);
+        // Update AI log to failed
+        if (aiLogId) {
+          await storage.updateProcessingLog(aiLogId, {
+            status: 'failed',
+            endTime: new Date(),
+            duration: Date.now() - aiStartTime,
+            errorMessage: 'AI could not extract structured PO data'
+          });
+        }
         return;
+      }
+
+      // Update AI processing log to completed
+      if (aiLogId) {
+        await storage.updateProcessingLog(aiLogId, {
+          status: 'completed',
+          endTime: new Date(), 
+          duration: Date.now() - aiStartTime,
+          details: {
+            ...((await storage.getProcessingLog(aiLogId))?.details || {}),
+            poNumber: structuredData.poNumber,
+            supplier: structuredData.supplier,
+            amount: structuredData.amount
+          }
+        });
       }
 
       // Find the user associated with this email account
@@ -395,10 +470,20 @@ Is this a purchase order email? Reply only "true" or "false".`;
         processingStatus: 'completed',
       });
 
-      console.log(`Successfully processed PO from ${attachment.filename}`);
+      console.log(`Successfully processed PO from ${attachment.filename}: ${structuredData.poNumber}`);
       
     } catch (error) {
       console.error(`Error processing attachment ${attachment.filename}:`, error);
+      
+      // Update processing log to failed if exists
+      if (processingLogId) {
+        await storage.updateProcessingLog(processingLogId, {
+          status: 'failed',
+          endTime: new Date(),
+          duration: Date.now() - startTime,
+          errorMessage: error instanceof Error ? error.message : 'Unknown processing error'
+        });
+      }
       
       // Save error record
       const users = await storage.getUsersByTenantId(emailAccount.tenantId);
@@ -445,7 +530,7 @@ JSON:`;
       
       try {
         // Multiple strategies to extract valid JSON
-        console.log('Raw AI response:', response);
+        console.log('AI response received, length:', response.length);
         
         const cleanedResponse = response.trim();
         
@@ -495,7 +580,8 @@ JSON:`;
           } catch {}
         }
         
-        console.error('All JSON parsing strategies failed for response:', response);
+        console.error('All JSON parsing strategies failed. Response length:', response.length);
+        console.error('Response preview:', response.substring(0, 500) + '...');
         return null;
         
       } catch (parseError) {

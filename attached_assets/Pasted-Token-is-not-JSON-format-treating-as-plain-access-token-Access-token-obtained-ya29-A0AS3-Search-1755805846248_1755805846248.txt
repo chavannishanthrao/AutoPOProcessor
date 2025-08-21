@@ -1,0 +1,274 @@
+Token is not JSON format, treating as plain access token
+Access token obtained: ya29.A0AS3...
+Searching Gmail for emails from last 24 hours...
+Gmail API response: 1 messages found
+Processing 1 Gmail messages...
+Processing email: PO #11112222 from Nishanth Rao <nirannishanth96@gmail.com>
+PO detected by keywords or attachments: PO #11112222
+Processing attachment: po-2.pdf
+Extracting text from po-2.pdf (application/pdf)
+7:49:28 PM [express] GET /api/user 304 in 132ms :: {"id":"6a6f52a4-7b44-420f-b846-a82a6335eaee","ema…
+7:49:29 PM [express] GET /api/dashboard/metrics 304 in 190ms :: {"totalPOs":0,"successRate":0,"avgPr…
+7:49:29 PM [express] GET /api/purchase-orders 304 in 175ms :: []
+WebSocket client connected
+Raw AI response: {
+  "poNumber": "PO-000030856",
+  "supplier": "R. TORRE & COMPANY",
+  "buyer": "Canterbury Coffee Corporation",
+  "date": "2025-06-27",
+  "amount": 58779.56,
+  "currency": "USD",
+  "lineItems": [
+    {
+      "description": "ALMOND 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "RASPBERRY 750ML F/C",
+      "quantity": 56,
+      "unitPrice": 46.79,
+      "totalPrice": 2586.64
+    },
+    {
+      "description": "CHERRY 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "STRAWBERRY 750ML",
+      "quantity": 84,
+      "unitPrice": 46.79,
+      "totalPrice": 3879.96
+    },
+    {
+      "description": "PEACH 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "FRENCH VANILLA 750ML F/C STOCK",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "MANGO 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "MAPLE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "COCONUT 750ML F/C",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "SALTED CARAMEL 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "PINEAPPLE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "LAVENDER 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "VANILLA BEAN 750ML F/C STOCK",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "PUMPKIN SPICE 750ML",
+      "quantity": 56,
+      "unitPrice": 46.79,
+      "totalPrice": 2586.64
+    },
+    {
+      "description": "CHAI TEA SPICE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. HAZELNUT CLASSIC 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "S.F. CARAMEL CLASSIC 750ML F/C",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. COCONUT 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. FRENCH VANILLA 750ML F/C",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "PUREMADE PUMPKIN PIE SAUCE",
+      "quantity": 80,
+      "unitPrice": 49.99,
+      "totalPrice": 3999.20
+    },
+    {
+      "description": "PUREMA
+All JSON parsing strategies failed for response: {
+  "poNumber": "PO-000030856",
+  "supplier": "R. TORRE & COMPANY",
+  "buyer": "Canterbury Coffee Corporation",
+  "date": "2025-06-27",
+  "amount": 58779.56,
+  "currency": "USD",
+  "lineItems": [
+    {
+      "description": "ALMOND 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "RASPBERRY 750ML F/C",
+      "quantity": 56,
+      "unitPrice": 46.79,
+      "totalPrice": 2586.64
+    },
+    {
+      "description": "CHERRY 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "STRAWBERRY 750ML",
+      "quantity": 84,
+      "unitPrice": 46.79,
+      "totalPrice": 3879.96
+    },
+    {
+      "description": "PEACH 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "FRENCH VANILLA 750ML F/C STOCK",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "MANGO 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "MAPLE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "COCONUT 750ML F/C",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "SALTED CARAMEL 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "PINEAPPLE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "LAVENDER 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "VANILLA BEAN 750ML F/C STOCK",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "PUMPKIN SPICE 750ML",
+      "quantity": 56,
+      "unitPrice": 46.79,
+      "totalPrice": 2586.64
+    },
+    {
+      "description": "CHAI TEA SPICE 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. HAZELNUT CLASSIC 750ML",
+      "quantity": 28,
+      "unitPrice": 46.79,
+      "totalPrice": 1293.32
+    },
+    {
+      "description": "S.F. CARAMEL CLASSIC 750ML F/C",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. COCONUT 750ML",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "S.F. FRENCH VANILLA 750ML F/C",
+      "quantity": 14,
+      "unitPrice": 46.79,
+      "totalPrice": 646.66
+    },
+    {
+      "description": "PUREMADE PUMPKIN PIE SAUCE",
+      "quantity": 80,
+      "unitPrice": 49.99,
+      "totalPrice": 3999.20
+    },
+    {
+      "description": "PUREMA
+No structured PO data found in po-2.pdf
