@@ -234,7 +234,7 @@ class EmailProcessor {
     console.log(`Processing email: ${email.subject} from ${email.from}`);
     
     // First, check if email is related to Purchase Orders using LLM
-    const isPoRelated = await this.checkIfPurchaseOrderEmail(email);
+    const isPoRelated = await this.checkIfPurchaseOrderEmail(email, emailAccount);
     
     if (!isPoRelated) {
       console.log(`Email not PO-related, skipping: ${email.subject}`);
@@ -250,8 +250,15 @@ class EmailProcessor {
   }
 
   // Check if email is Purchase Order related using LLM
-  private async checkIfPurchaseOrderEmail(email: EmailData): Promise<boolean> {
+  private async checkIfPurchaseOrderEmail(email: EmailData, emailAccount: EmailAccount): Promise<boolean> {
     try {
+      // Get active AI configuration for the tenant
+      const aiConfig = await storage.getActiveAiConfiguration(emailAccount.tenantId);
+      if (!aiConfig) {
+        console.log('No active AI configuration found for tenant:', emailAccount.tenantId);
+        return false; // No AI config available, skip processing
+      }
+
       const prompt = `
 Analyze this email to determine if it contains a Purchase Order or is related to purchase order processing.
 
@@ -269,7 +276,7 @@ Consider these indicators:
 
 Response (true/false only):`;
 
-      const response = await aiService.processWithOpenAI(prompt, 'gpt-3.5-turbo');
+      const response = await aiService.processWithOpenAI(prompt, aiConfig, 'gpt-3.5-turbo');
       return response.toLowerCase().trim() === 'true';
     } catch (error) {
       console.error('Error checking if email is PO-related:', error);
@@ -312,7 +319,7 @@ Response (true/false only):`;
       }
 
       // Use LLM to extract structured PO data
-      const structuredData = await this.extractPurchaseOrderData(extractedText);
+      const structuredData = await this.extractPurchaseOrderData(extractedText, emailAccount);
       
       if (!structuredData) {
         console.log(`No structured PO data found in ${attachment.filename}`);
@@ -376,8 +383,15 @@ Response (true/false only):`;
   }
 
   // Extract structured PO data using LLM
-  private async extractPurchaseOrderData(text: string): Promise<any> {
+  private async extractPurchaseOrderData(text: string, emailAccount: EmailAccount): Promise<any> {
     try {
+      // Get active AI configuration for the tenant
+      const aiConfig = await storage.getActiveAiConfiguration(emailAccount.tenantId);
+      if (!aiConfig) {
+        console.log('No active AI configuration found for tenant:', emailAccount.tenantId);
+        return null; // No AI config available, skip processing
+      }
+
       const prompt = `
 Extract purchase order information from the following text and return it as a JSON object.
 
@@ -407,7 +421,7 @@ Please extract the following fields (return null for any field that cannot be fo
 
 Return only the JSON object, no other text:`;
 
-      const response = await aiService.processWithOpenAI(prompt, 'gpt-3.5-turbo');
+      const response = await aiService.processWithOpenAI(prompt, aiConfig, 'gpt-3.5-turbo');
       
       try {
         return JSON.parse(response);

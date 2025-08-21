@@ -126,15 +126,12 @@ Extract all available information. Use null for missing fields.`
   }
 
   // Generic OpenAI processing method for simple prompts
-  async processWithOpenAI(prompt: string, modelName: string = 'gpt-3.5-turbo'): Promise<string> {
+  async processWithOpenAI(prompt: string, config: AiConfiguration, modelName?: string): Promise<string> {
     try {
-      // Use the OpenAI API key from environment variables
-      const client = new OpenAI({ 
-        apiKey: process.env.OPENAI_API_KEY 
-      });
+      const client = this.getClient(config);
       
       const response = await client.chat.completions.create({
-        model: modelName,
+        model: modelName || config.modelName,
         messages: [
           {
             role: "user",
